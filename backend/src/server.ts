@@ -2,8 +2,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { startBullProcessor, stopBullProcessor } from "./queue/bullProcessor";
+import { startMultiWorkerProcessor, stopMultiWorkerProcessor } from "./queue/multiWorkerProcessor";
 import uploadRoutes from "./routes/upload";
 import verifyRoutes from "./routes/verify";
+import disputeRoutes from "./routes/dispute";
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +26,7 @@ app.get("/health", (req, res) => {
 // Routes
 app.use("/api", uploadRoutes);
 app.use("/api", verifyRoutes);
+app.use("/api/dispute", disputeRoutes);
 
 // Error handler
 app.use(
@@ -46,19 +49,37 @@ app.listen(PORT, () => {
   console.log(`   - Verify: POST /api/verify`);
   console.log(`   - Attestation: GET /api/attestation/:attestationId`);
 
-  // Start Bull processor
-  startBullProcessor();
+  // Start processors
+  const useMultiWorker = process.env.USE_MULTI_WORKER === "true";
+  
+  if (useMultiWorker) {
+    console.log("🔥 Starting Multi-Worker Processor (Production Mode)");
+    startMultiWorkerProcessor();
+  } else {
+    console.log("⚡ Starting Single Processor (Development Mode)");
+    startBullProcessor();
+  }
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
-  await stopBullProcessor();
+  const useMultiWorker = process.env.USE_MULTI_WORKER === "true";
+  if (useMultiWorker) {
+    await stopMultiWorkerProcessor();
+  } else {
+    await stopBullProcessor();
+  }
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.log("SIGINT received, shutting down gracefully");
-  await stopBullProcessor();
+  const useMultiWorker = process.env.USE_MULTI_WORKER === "true";
+  if (useMultiWorker) {
+    await stopMultiWorkerProcessor();
+  } else {
+    await stopBullProcessor();
+  }
   process.exit(0);
 });

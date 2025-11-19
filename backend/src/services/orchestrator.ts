@@ -25,12 +25,16 @@ export class OrchestrationService {
   private encryption: EncryptionService;
   private blockchain: BlockchainService;
   private nautilus: NautilusService | null;
+  private enclaveId: string;
 
-  constructor() {
+  constructor(enclaveId?: string) {
     this.storage = new StorageService();
     this.encryption = new EncryptionService();
     this.blockchain = new BlockchainService();
+    this.enclaveId = enclaveId || ENCLAVE_ID;
     this.nautilus = USE_NAUTILUS_TEE ? new NautilusService() : null;
+    
+    console.log(`[Orchestrator] Initialized for enclave: ${this.enclaveId}`);
   }
 
   async processVerificationJob(
@@ -43,7 +47,7 @@ export class OrchestrationService {
     const decryptedMedia = await this.encryption.decryptData(
       encryptedMedia,
       job.encryptionMeta,
-      ENCLAVE_ID
+      this.enclaveId
     );
 
     // 2. Run AI detection
@@ -108,9 +112,9 @@ export class OrchestrationService {
     
     report.enclaveAttestation = {
       signature: enclaveSignature,
-      enclaveId: ENCLAVE_ID,
+      enclaveId: this.enclaveId,
       timestamp: new Date().toISOString(),
-      mrenclave: this.nautilus?.getEnclaveInfo().mrenclave || `mock_mrenclave_${ENCLAVE_ID}`,
+      mrenclave: this.nautilus?.getEnclaveInfo().mrenclave || `mock_mrenclave_${this.enclaveId}`,
     };
 
     // 7. Store report in Walrus
