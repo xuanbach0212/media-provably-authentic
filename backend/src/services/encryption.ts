@@ -1,52 +1,23 @@
 import { EncryptionMetadata } from "@media-auth/shared";
-import axios from "axios";
 import { SealService } from "./seal";
 
-const MOCK_SERVICES_URL =
-  process.env.MOCK_SERVICES_URL || "http://localhost:3002";
-const USE_SEAL_KMS = process.env.USE_SEAL_TESTNET === "true";
-
 export class EncryptionService {
-  private seal: SealService | null;
+  private seal: SealService;
 
   constructor() {
-    this.seal = USE_SEAL_KMS ? new SealService() : null;
+    // Always use Seal (production-grade crypto with mock KMS)
+    this.seal = new SealService();
+    console.log(`[Encryption] Seal service initialized`);
   }
 
   async createPolicy(allowedEnclaves: string[]): Promise<string> {
-    console.log(`[Encryption] Creating policy for enclaves: ${allowedEnclaves.join(", ")}`);
-    console.log(`[Encryption] USE_SEAL_KMS=${USE_SEAL_KMS}, seal=${!!this.seal}`);
-    
-    // Use Seal KMS if enabled
-    if (this.seal) {
-      try {
-        const policyId = await this.seal.createPolicy(allowedEnclaves);
-        console.log(`[Encryption] ✓ Seal policy created: ${policyId}`);
-        return policyId;
-      } catch (error: any) {
-        console.error("[Encryption] Seal failed, falling back to mock:", error.message);
-        console.error("[Encryption] Seal error stack:", error.stack);
-        // Fall through to mock
-      }
-    }
-
-    // Use mock service
     try {
-      console.log(`[Encryption] Using mock service at ${MOCK_SERVICES_URL}`);
-      const response = await axios.post(
-        `${MOCK_SERVICES_URL}/seal/create-policy`,
-        {
-          allowedEnclaves,
-        }
-      );
-
-      const policyId = response.data.policy.policyId;
-      console.log(`[Encryption] ✓ Mock policy created: ${policyId}`);
+      const policyId = await this.seal.createPolicy(allowedEnclaves);
+      console.log(`[Encryption] ✓ Policy created: ${policyId}`);
       return policyId;
     } catch (error: any) {
-      console.error("Error creating policy:", error.message);
-      console.error("Error stack:", error.stack);
-      throw new Error("Failed to create encryption policy");
+      console.error("[Encryption] Failed to create policy:", error.message);
+      throw error;
     }
   }
 
@@ -54,34 +25,11 @@ export class EncryptionService {
     data: Buffer,
     policyId: string
   ): Promise<{ encrypted: Buffer; metadata: EncryptionMetadata }> {
-    // Use Seal KMS if enabled
-    if (this.seal) {
-      try {
-        const result = await this.seal.encryptData(data, policyId);
-        return {
-          encrypted: result.encrypted,
-          metadata: result.metadata,
-        };
-      } catch (error: any) {
-        console.error("[Encryption] Seal encryption failed, falling back to mock:", error.message);
-        // Fall through to mock
-      }
-    }
-
-    // Use mock service
     try {
-      const response = await axios.post(`${MOCK_SERVICES_URL}/seal/encrypt`, {
-        data: data.toString("base64"),
-        policyId,
-      });
-
-      return {
-        encrypted: Buffer.from(response.data.encrypted, "base64"),
-        metadata: response.data.metadata,
-      };
+      return await this.seal.encryptData(data, policyId);
     } catch (error: any) {
-      console.error("Error encrypting data:", error.message);
-      throw new Error("Failed to encrypt data");
+      console.error("[Encryption] Failed to encrypt:", error.message);
+      throw error;
     }
   }
 
@@ -90,28 +38,11 @@ export class EncryptionService {
     metadata: EncryptionMetadata,
     enclaveId: string
   ): Promise<Buffer> {
-    // Use Seal KMS if enabled
-    if (this.seal) {
-      try {
-        return await this.seal.decryptData(encrypted, metadata, enclaveId);
-      } catch (error: any) {
-        console.error("[Encryption] Seal decryption failed, falling back to mock:", error.message);
-        // Fall through to mock
-      }
-    }
-
-    // Use mock service
     try {
-      const response = await axios.post(`${MOCK_SERVICES_URL}/seal/decrypt`, {
-        encrypted: encrypted.toString("base64"),
-        metadata,
-        enclaveId,
-      });
-
-      return Buffer.from(response.data.decrypted, "base64");
+      return await this.seal.decryptData(encrypted, metadata, enclaveId);
     } catch (error: any) {
-      console.error("Error decrypting data:", error.message);
-      throw new Error("Failed to decrypt data");
+      console.error("[Encryption] Failed to decrypt:", error.message);
+      throw error;
     }
   }
 }

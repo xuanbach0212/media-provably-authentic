@@ -18,18 +18,18 @@ interface WalrusStoreResponse {
   newlyCreated?: {
     blobObject: {
       id: string;
-      storedEpoch: number;
       blobId: string;
       size: number;
       erasureCodeType: string;
       certifiedEpoch: number;
     };
-    encodedSize: number;
-    cost: number;
   };
   alreadyCertified?: {
     blobId: string;
-    event: any;
+    event: {
+      txDigest: string;
+      eventSeq: string;
+    };
     endEpoch: number;
   };
 }
@@ -37,7 +37,7 @@ interface WalrusStoreResponse {
 interface WalrusBlob {
   blobId: string;
   size: number;
-  uploadedAt: string;
+  uploadedAt?: string;
   metadata?: Record<string, any>;
 }
 
@@ -47,7 +47,8 @@ export class WalrusService {
 
   constructor() {
     this.publisherUrl = WALRUS_TESTNET_PUBLISHER;
-    this.aggregatorUrl = WALRUS_AGGREGATOR;
+    this.aggregatorUrl = WALRUS_TESTNET_AGGREGATOR;
+    console.log(`[Walrus] Initialized (testnet with fallback)`);
   }
 
   /**
@@ -60,65 +61,45 @@ export class WalrusService {
     data: Buffer,
     metadata?: Record<string, any>
   ): Promise<WalrusBlob> {
-    try {
-      console.log(`[Walrus] Storing blob (${data.length} bytes)...`);
+    console.log(`[Walrus] Storing ${data.length} bytes on testnet...`);
 
-      // Store on Walrus via PUT request
-      const response = await axios.put(
-        `${this.publisherUrl}/v1/store`,
-        data,
-        {
-          params: {
-            epochs: WALRUS_EPOCHS,
-          },
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          timeout: 60000, // 60 second timeout
-        }
-      );
-
-      const result: WalrusStoreResponse = response.data;
-
-      // Handle response - can be newlyCreated or alreadyCertified
-      let blobId: string;
-      let size: number;
-
-      if (result.newlyCreated) {
-        blobId = result.newlyCreated.blobObject.blobId;
-        size = result.newlyCreated.blobObject.size;
-        console.log(`[Walrus] ✓ Newly stored blob: ${blobId}`);
-      } else if (result.alreadyCertified) {
-        blobId = result.alreadyCertified.blobId;
-        size = data.length;
-        console.log(`[Walrus] ✓ Already certified blob: ${blobId}`);
-      } else {
-        throw new Error("Unknown Walrus response format");
+    const response = await axios.put(
+      `${this.publisherUrl}/v1/store`,
+      data,
+      {
+        params: {
+          epochs: WALRUS_EPOCHS,
+        },
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+        timeout: 60000,
       }
+    );
 
-      return {
-        blobId,
-        size,
-        uploadedAt: new Date().toISOString(),
-        metadata,
-      };
-    } catch (error: any) {
-      console.error("[Walrus] Error storing blob:", error.message);
-      
-      // If Walrus testnet is down, log but don't fail completely
-      if (error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
-        console.warn("[Walrus] Testnet unavailable, using mock fallback");
-        // Return mock response
-        return {
-          blobId: `mock_${crypto.randomBytes(16).toString("hex")}`,
-          size: data.length,
-          uploadedAt: new Date().toISOString(),
-          metadata: { ...metadata, mode: "mock_fallback" },
-        };
-      }
+    const result: WalrusStoreResponse = response.data;
 
-      throw new Error(`Failed to store blob on Walrus: ${error.message}`);
+    let blobId: string;
+    let size: number;
+
+    if (result.newlyCreated) {
+      blobId = result.newlyCreated.blobObject.blobId;
+      size = result.newlyCreated.blobObject.size;
+      console.log(`[Walrus] ✓ Stored: ${blobId.substring(0, 20)}...`);
+    } else if (result.alreadyCertified) {
+      blobId = result.alreadyCertified.blobId;
+      size = data.length;
+      console.log(`[Walrus] ✓ Already exists: ${blobId.substring(0, 20)}...`);
+    } else {
+      throw new Error("Unknown Walrus response");
     }
+
+    return {
+      blobId,
+      size,
+      uploadedAt: new Date().toISOString(),
+      metadata,
+    };
   }
 
   /**
@@ -127,78 +108,29 @@ export class WalrusService {
    * @returns Buffer of blob data
    */
   async retrieveBlob(blobId: string): Promise<Buffer> {
-    try {
-      console.log(`[Walrus] Retrieving blob: ${blobId}...`);
+    console.log(`[Walrus] Retrieving from testnet: ${blobId.substring(0, 20)}...`);
 
-      // Check if it's a mock blob
-      if (blobId.startsWith("mock_")) {
-        throw new Error("Mock blob cannot be retrieved from Walrus");
+    const response = await axios.get(
+      `${this.aggregatorUrl}/v1/${blobId}`,
+      {
+        responseType: "arraybuffer",
+        timeout: 60000,
       }
+    );
 
-      // Retrieve from Walrus via GET request
-      const response = await axios.get(
-        `${this.aggregatorUrl}/v1/${blobId}`,
-        {
-          responseType: "arraybuffer",
-          timeout: 60000,
-        }
-      );
-
-      console.log(`[Walrus] ✓ Retrieved blob (${response.data.length} bytes)`);
-      return Buffer.from(response.data);
-    } catch (error: any) {
-      console.error("[Walrus] Error retrieving blob:", error.message);
-      
-      if (error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
-        console.warn("[Walrus] Testnet unavailable for retrieval");
-      }
-
-      throw new Error(`Failed to retrieve blob from Walrus: ${error.message}`);
-    }
+    console.log(`[Walrus] ✓ Retrieved ${response.data.length} bytes`);
+    return Buffer.from(response.data);
   }
 
   /**
-   * Check if Walrus testnet is available
+   * Check if Walrus testnet is accessible
    */
   async healthCheck(): Promise<boolean> {
     try {
-      // Simple connectivity check
-      await axios.get(`${this.publisherUrl}/v1/api`, {
-        timeout: 5000,
-      });
+      await axios.get(`${this.publisherUrl}/v1/health`, { timeout: 5000 });
       return true;
-    } catch (error) {
-      console.warn("[Walrus] Testnet health check failed");
+    } catch {
       return false;
     }
   }
-
-  /**
-   * Get blob information without downloading
-   * @param blobId The blob ID
-   */
-  async getBlobInfo(blobId: string): Promise<any> {
-    try {
-      const response = await axios.head(
-        `${this.aggregatorUrl}/v1/${blobId}`,
-        {
-          timeout: 10000,
-        }
-      );
-
-      return {
-        exists: response.status === 200,
-        contentLength: response.headers["content-length"],
-        contentType: response.headers["content-type"],
-      };
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return { exists: false };
-      }
-      throw error;
-    }
-  }
 }
-
-export default WalrusService;
-

@@ -323,6 +323,3 @@ export class SealService {
   }
 }
 
-export { SealService };
-export default SealService;
-

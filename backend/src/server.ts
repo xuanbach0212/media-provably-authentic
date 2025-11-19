@@ -1,14 +1,16 @@
 import cors from "cors";
 import dotenv from "dotenv";
+
+// Load environment variables FIRST before any other imports
+dotenv.config();
+console.log("[ENV] SUI_PRIVATE_KEY loaded:", process.env.SUI_PRIVATE_KEY ? "✅ YES" : "❌ NO");
+
 import express from "express";
 import { startBullProcessor, stopBullProcessor } from "./queue/bullProcessor";
 import { startMultiWorkerProcessor, stopMultiWorkerProcessor } from "./queue/multiWorkerProcessor";
 import uploadRoutes from "./routes/upload";
 import verifyRoutes from "./routes/verify";
 import disputeRoutes from "./routes/dispute";
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
