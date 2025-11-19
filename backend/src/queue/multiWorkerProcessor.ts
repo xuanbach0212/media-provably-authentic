@@ -7,7 +7,7 @@ import { Job } from "bull";
 import { VerificationJob } from "@media-auth/shared";
 import { OrchestrationService } from "../services/orchestrator";
 import { AggregatorService } from "../services/aggregator";
-import verificationQueue, { jobQueue } from "./bullQueue";
+import verificationQueue, { jobQueue, reportStore } from "./bullQueue";
 
 const NUM_WORKERS = parseInt(process.env.NUM_ENCLAVE_WORKERS || "3");
 const ORACLE_REPUTATION_BASE = parseFloat(process.env.ORACLE_REPUTATION || "0.8");
@@ -53,109 +53,114 @@ class MultiWorkerProcessor {
    * Start all workers
    */
   start(): void {
-    this.workers.forEach((worker) => {
-      this.startWorker(worker);
+    // Single processor that spawns multiple enclave verifications
+    verificationQueue.process(async (job: Job<VerificationJob>) => {
+      return await this.processJobWithAllEnclaves(job);
     });
 
-    console.log(`[MultiWorker] Started ${NUM_WORKERS} enclave workers`);
+    console.log(`[MultiWorker] Started processor with ${NUM_WORKERS} enclave consensus`);
   }
 
   /**
-   * Start individual worker
+   * Process job with all enclaves in parallel
    */
-  private startWorker(worker: WorkerConfig): void {
-    const { enclaveId, reputation, stake } = worker;
-
-    // Each worker processes jobs independently
-    verificationQueue.process(
-      enclaveId, // Worker name
-      1, // Concurrency per worker
-      async (job: Job<VerificationJob>) => {
-        return await this.processJob(job, worker);
-      }
-    );
-
-    console.log(`[MultiWorker] Worker ${enclaveId} ready`);
-  }
-
-  /**
-   * Process job with specific worker/enclave
-   */
-  private async processJob(
-    job: Job<VerificationJob>,
-    worker: WorkerConfig
+  private async processJobWithAllEnclaves(
+    job: Job<VerificationJob>
   ): Promise<any> {
-    const { enclaveId, reputation, stake } = worker;
     const verificationJob = job.data;
 
     console.log(
-      `[MultiWorker] Worker ${enclaveId} processing job ${verificationJob.jobId}`
+      `[MultiWorker] Processing job ${verificationJob.jobId} with ${NUM_WORKERS} enclaves`
     );
 
     try {
-      // Get or create orchestrator for this enclave
-      if (!this.orchestrators.has(enclaveId)) {
-        this.orchestrators.set(
-          enclaveId,
-          new OrchestrationService(enclaveId)
-        );
-      }
-      const orchestrator = this.orchestrators.get(enclaveId)!;
-
-      // Process verification
       await job.progress(10);
-      const report = await orchestrator.processVerificationJob(verificationJob);
+
+      // Process with all enclaves in parallel
+      const enclavePromises = this.workers.map(async (worker) => {
+        const { enclaveId, reputation, stake } = worker;
+        
+        console.log(`[MultiWorker] Enclave ${enclaveId} starting verification...`);
+
+        // Get or create orchestrator for this enclave
+        if (!this.orchestrators.has(enclaveId)) {
+          this.orchestrators.set(
+            enclaveId,
+            new OrchestrationService(enclaveId)
+          );
+        }
+        const orchestrator = this.orchestrators.get(enclaveId)!;
+
+        // Process verification
+        const report = await orchestrator.processVerificationJob(verificationJob);
+        
+        console.log(
+          `[MultiWorker] Enclave ${enclaveId} completed: verdict=${report.verdict}, ` +
+          `confidence=${(report.confidence * 100).toFixed(1)}%`
+        );
+
+        // Submit report to aggregator
+        await this.aggregator.submitReport(
+          verificationJob.jobId,
+          enclaveId,
+          report,
+          reputation,
+          stake
+        );
+
+        return { enclaveId, report, reputation, stake };
+      });
+
+      // Wait for all enclaves to complete
+      const results = await Promise.all(enclavePromises);
       await job.progress(80);
 
-      // Submit report to aggregator
-      const hasConsensus = await this.aggregator.submitReport(
-        verificationJob.jobId,
-        enclaveId,
-        report,
-        reputation,
-        stake
+      console.log(
+        `[MultiWorker] All ${NUM_WORKERS} enclaves completed for job ${verificationJob.jobId}`
       );
+
+      // Compute consensus
+      const consensus = await this.aggregator.computeConsensus(verificationJob.jobId);
+      
+      if (!consensus) {
+        throw new Error("Failed to reach consensus");
+      }
 
       await job.progress(90);
 
-      // If consensus reached, finalize
-      if (hasConsensus) {
-        console.log(`[MultiWorker] Consensus reached for job ${verificationJob.jobId}`);
-        
-        const consensus = await this.aggregator.computeConsensus(verificationJob.jobId);
-        
-        if (consensus) {
-          // Store consensus report
-          const finalReport = {
-            ...report,
-            verdict: consensus.finalVerdict,
-            confidence: consensus.confidence,
-            consensusMetadata: {
-              agreementRate: consensus.agreementRate,
-              participatingEnclaves: consensus.reports.length,
-              consensusTimestamp: consensus.consensusTimestamp,
-            },
-          };
+      // Create final report with consensus
+      const finalReport = {
+        ...results[0].report, // Use first report as base
+        verdict: consensus.finalVerdict,
+        confidence: consensus.confidence,
+        consensusMetadata: {
+          agreementRate: consensus.agreementRate,
+          participatingEnclaves: consensus.reports.length,
+          consensusTimestamp: consensus.consensusTimestamp,
+          enclaveReports: results.map(r => ({
+            enclaveId: r.enclaveId,
+            verdict: r.report.verdict,
+            confidence: r.report.confidence,
+            reputation: r.reputation,
+            stake: r.stake,
+          })),
+        },
+      };
 
-          await jobQueue.storeReport(verificationJob.jobId, finalReport);
-          
-          console.log(
-            `[MultiWorker] Job ${verificationJob.jobId} completed with consensus: ` +
-            `verdict=${consensus.finalVerdict}, agreement=${(consensus.agreementRate * 100).toFixed(1)}%`
-          );
-        }
-      } else {
-        console.log(
-          `[MultiWorker] Waiting for more reports (worker ${enclaveId})`
-        );
-      }
+      console.log(
+        `[MultiWorker] Consensus: verdict=${consensus.finalVerdict}, ` +
+        `agreement=${(consensus.agreementRate * 100).toFixed(1)}%`
+      );
+
+      // Store final report
+      await reportStore.storeReport(verificationJob.jobId, finalReport);
 
       await job.progress(100);
-      return report;
+      return finalReport;
       
     } catch (error: any) {
       console.error(
-        `[MultiWorker] Worker ${enclaveId} failed to process job ${verificationJob.jobId}:`,
+        `[MultiWorker] Failed to process job ${verificationJob.jobId}:`,
         error.message
       );
       throw error;

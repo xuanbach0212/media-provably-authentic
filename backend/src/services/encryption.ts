@@ -14,18 +14,25 @@ export class EncryptionService {
   }
 
   async createPolicy(allowedEnclaves: string[]): Promise<string> {
+    console.log(`[Encryption] Creating policy for enclaves: ${allowedEnclaves.join(", ")}`);
+    console.log(`[Encryption] USE_SEAL_KMS=${USE_SEAL_KMS}, seal=${!!this.seal}`);
+    
     // Use Seal KMS if enabled
     if (this.seal) {
       try {
-        return await this.seal.createPolicy(allowedEnclaves);
+        const policyId = await this.seal.createPolicy(allowedEnclaves);
+        console.log(`[Encryption] ✓ Seal policy created: ${policyId}`);
+        return policyId;
       } catch (error: any) {
         console.error("[Encryption] Seal failed, falling back to mock:", error.message);
+        console.error("[Encryption] Seal error stack:", error.stack);
         // Fall through to mock
       }
     }
 
     // Use mock service
     try {
+      console.log(`[Encryption] Using mock service at ${MOCK_SERVICES_URL}`);
       const response = await axios.post(
         `${MOCK_SERVICES_URL}/seal/create-policy`,
         {
@@ -33,9 +40,12 @@ export class EncryptionService {
         }
       );
 
-      return response.data.policy.policyId;
+      const policyId = response.data.policy.policyId;
+      console.log(`[Encryption] ✓ Mock policy created: ${policyId}`);
+      return policyId;
     } catch (error: any) {
       console.error("Error creating policy:", error.message);
+      console.error("Error stack:", error.stack);
       throw new Error("Failed to create encryption policy");
     }
   }

@@ -6,7 +6,7 @@
  * For testnet: https://docs.sui.io/guides/developer/getting-started/sui-environment
  */
 
-import { SuiClient, getFullnodeUrl } from "@mysten/sui";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { TransactionBlock } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { BlockchainAttestation, Verdict } from "@media-auth/shared";

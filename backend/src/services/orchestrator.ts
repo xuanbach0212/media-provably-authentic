@@ -54,14 +54,14 @@ export class OrchestrationService {
     const aiDetection = await this.runAIDetection(decryptedMedia);
 
     // 3. Run reverse search for provenance
-    const provenance = await this.runReverseSearch(
+    const reverseSearch = await this.runReverseSearch(
       decryptedMedia,
       job.metadata
     );
 
     // 4. Determine verdict based on results
-    const verdict = this.determineVerdict(aiDetection, provenance);
-    const confidence = this.calculateConfidence(aiDetection, provenance);
+    const verdict = this.determineVerdict(aiDetection, reverseSearch);
+    const confidence = this.calculateConfidence(aiDetection, reverseSearch);
 
     // 5. Generate report
     const report: VerificationReport = {
@@ -70,7 +70,8 @@ export class OrchestrationService {
       mediaHash: job.mediaHash,
       verdict,
       confidence,
-      provenance,
+      provenance: reverseSearch,
+      reverseSearch: reverseSearch,
       aiDetection,
       forensicAnalysis: {
         fileSize: job.metadata.size,
@@ -123,15 +124,24 @@ export class OrchestrationService {
       type: "verification-report",
       jobId: job.jobId,
     });
+    report.reportStorageCID = reportCID;
+    console.log(`[Orchestrator] ✓ Report stored in Walrus: ${reportCID}`);
 
     // 8. Submit attestation to blockchain
-    await this.blockchain.submitAttestation(
+    const blockchainAttestation = await this.blockchain.submitAttestation(
       job.jobId,
       job.mediaHash,
       reportCID,
       verdict,
       report.enclaveAttestation.signature
     );
+    report.blockchainAttestation = blockchainAttestation;
+    console.log(
+      `[Orchestrator] ✓ Attestation submitted to Sui: ${blockchainAttestation.txHash}`
+    );
+
+    // 9. Add encryption metadata to report
+    report.encryptionMetadata = job.encryptionMeta;
 
     console.log(
       `[Orchestrator] Job ${job.jobId} completed with verdict: ${verdict}`
