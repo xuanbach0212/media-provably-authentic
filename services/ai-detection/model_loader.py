@@ -18,7 +18,9 @@ class ModelRegistry:
         "primary": "umm-maybe/AI-image-detector",
         "deepfake": "dima806/deepfake_vs_real_image_detection",
         "sdxl": "Organika/sdxl-detector",
-        "fallback": "openai/clip-vit-base-patch32",
+        "clip": "openai/clip-vit-base-patch32",
+        "vit": "google/vit-base-patch16-224",
+        "resnet": "microsoft/resnet-50",
     }
 
     # Model configurations
@@ -52,6 +54,20 @@ class ModelRegistry:
             "labels_mapping": {},
             "threshold": 0.6,
             "weight": 0.02,
+        },
+        "google/vit-base-patch16-224": {
+            "type": "image-classification",
+            "purpose": "Vision Transformer general classification",
+            "labels_mapping": {},
+            "threshold": 0.55,
+            "weight": 0.25,
+        },
+        "microsoft/resnet-50": {
+            "type": "image-classification",
+            "purpose": "ResNet CNN baseline",
+            "labels_mapping": {},
+            "threshold": 0.55,
+            "weight": 0.25,
         },
     }
 

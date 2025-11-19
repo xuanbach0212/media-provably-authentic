@@ -31,10 +31,29 @@ class AIDetectionModels:
         try:
             logger.info("Loading verified AI detection models...")
 
-            # Load models using registry
-            self.loaded_models = ModelRegistry.load_best_available(
-                device=self.device_id, try_all=config.LOAD_ALL_MODELS
-            )
+            # Check if single model test mode
+            if config.SINGLE_MODEL_TEST:
+                model_key = config.SINGLE_MODEL_TEST
+                if model_key in config.MODELS:
+                    model_name = config.MODELS[model_key]
+                    logger.info(f"🔍 Single model test mode: {model_name}")
+
+                    model_data = ModelRegistry.load_model(
+                        model_name, device=self.device_id
+                    )
+                    if model_data:
+                        self.loaded_models = {"test_model": model_data}
+                    else:
+                        logger.error(f"Failed to load {model_name}")
+                        self.loaded_models = {}
+                else:
+                    logger.error(f"Unknown model key: {model_key}")
+                    self.loaded_models = {}
+            else:
+                # Normal mode: load using registry
+                self.loaded_models = ModelRegistry.load_best_available(
+                    device=self.device_id, try_all=config.LOAD_ALL_MODELS
+                )
 
             self.models_loaded = True
 
@@ -96,6 +115,23 @@ class AIDetectionModels:
 
         model_scores["ai_generated_score"] = ai_generated_score
         model_scores["deepfake_score"] = deepfake_score
+        model_scores["ensemble_model_count"] = len(all_predictions)
+
+        # Track individual model verdicts for transparency
+        individual_verdicts = {}
+        for pred in all_predictions:
+            model_key = pred["model"]
+            predictions = pred["predictions"]
+            
+            # Get AI score from predictions
+            ai_score = self._extract_ai_score_from_predictions(predictions)
+            individual_verdicts[model_key] = {
+                "ai_score": float(ai_score),
+                "verdict": "AI_GENERATED" if ai_score > 0.5 else "REAL",
+                "weight": pred["weight"]
+            }
+        
+        model_scores["individual_model_verdicts"] = individual_verdicts
 
         # Manipulation detection (from forensics)
         manipulation_score = forensics.get("manipulation_likelihood", 0.0)
@@ -182,6 +218,10 @@ class AIDetectionModels:
         )
 
         return float(final_ai_score), float(final_deepfake_score)
+
+    def _extract_ai_score_from_predictions(self, predictions: list) -> float:
+        """Extract AI score from predictions for individual verdict tracking"""
+        return self._extract_ai_score(predictions, "generic")
 
     def _extract_ai_score(self, predictions: list, model_key: str) -> float:
         """Extract AI-generated score from predictions"""

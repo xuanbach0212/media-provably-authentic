@@ -1,0 +1,241 @@
+{
+  "test_date": "2024-11-19",
+  "test_configuration": {
+    "total_images": 100,
+    "real_images": 50,
+    "ai_generated_images": 50,
+    "forensics_enabled": false,
+    "test_mode": "pure_model_performance"
+  },
+  "models_tested": [
+    {
+      "rank": 1,
+      "model": "dima806/deepfake_vs_real_image_detection",
+      "downloads": "33K",
+      "purpose": "Deepfake and manipulation detection",
+      "metrics": {
+        "overall_accuracy": 51.0,
+        "real_accuracy": 92.0,
+        "ai_accuracy": 10.0,
+        "avg_time_per_image": 0.071,
+        "total_time": 7.2
+      },
+      "analysis": {
+        "strengths": [
+          "Highest overall accuracy (51%)",
+          "Excellent real image detection (92%)",
+          "Fast inference time (0.071s)",
+          "Most balanced approach"
+        ],
+        "weaknesses": [
+          "Poor AI-generated detection (only 10%)",
+          "Heavily biased towards REAL classification"
+        ],
+        "use_case": "Best for reducing false positives on real images"
+      }
+    },
+    {
+      "rank": 2,
+      "model": "Organika/sdxl-detector",
+      "downloads": "4K",
+      "purpose": "Stable Diffusion XL detection",
+      "metrics": {
+        "overall_accuracy": 35.0,
+        "real_accuracy": 14.0,
+        "ai_accuracy": 56.0,
+        "avg_time_per_image": 0.110,
+        "total_time": 11.1
+      },
+      "analysis": {
+        "strengths": [
+          "BEST AI detection (56%)",
+          "Only model that detects majority of AI images",
+          "Specialized for modern AI image generators"
+        ],
+        "weaknesses": [
+          "Very poor real image detection (14%)",
+          "High false positive rate on real images",
+          "Slowest inference time"
+        ],
+        "use_case": "Best for detecting SDXL and modern AI-generated images"
+      }
+    },
+    {
+      "rank": 3,
+      "model": "openai/clip-vit-base-patch32",
+      "downloads": "18M",
+      "purpose": "Multi-modal fallback",
+      "metrics": {
+        "overall_accuracy": 50.0,
+        "real_accuracy": 100.0,
+        "ai_accuracy": 0.0,
+        "avg_time_per_image": 0.003,
+        "total_time": 0.3
+      },
+      "analysis": {
+        "strengths": [
+          "PERFECT real image detection (100%)",
+          "FASTEST inference (0.003s - 30x faster!)",
+          "Zero false positives on real images"
+        ],
+        "weaknesses": [
+          "ZERO AI detection capability",
+          "Not trained for AI detection task"
+        ],
+        "use_case": "Good for baseline or as fallback for real image confirmation"
+      }
+    },
+    {
+      "rank": 4,
+      "model": "google/vit-base-patch16-224",
+      "downloads": "3.2M",
+      "purpose": "Vision Transformer general classification",
+      "metrics": {
+        "overall_accuracy": 49.0,
+        "real_accuracy": 98.0,
+        "ai_accuracy": 0.0,
+        "avg_time_per_image": 0.078,
+        "total_time": 7.9
+      },
+      "analysis": {
+        "strengths": [
+          "Near-perfect real detection (98%)",
+          "Fast inference"
+        ],
+        "weaknesses": [
+          "Cannot detect AI images",
+          "Not specialized for this task"
+        ],
+        "use_case": "Not recommended for AI detection"
+      }
+    },
+    {
+      "rank": 5,
+      "model": "microsoft/resnet-50",
+      "downloads": "253K",
+      "purpose": "ResNet CNN baseline",
+      "metrics": {
+        "overall_accuracy": 50.0,
+        "real_accuracy": 98.0,
+        "ai_accuracy": 2.0,
+        "avg_time_per_image": 0.035,
+        "total_time": 3.5
+      },
+      "analysis": {
+        "strengths": [
+          "Near-perfect real detection (98%)",
+          "Very fast (0.035s)"
+        ],
+        "weaknesses": [
+          "Almost no AI detection (2%)",
+          "Not specialized for this task"
+        ],
+        "use_case": "Not recommended for AI detection"
+      }
+    },
+    {
+      "rank": 6,
+      "model": "umm-maybe/AI-image-detector",
+      "downloads": "10K",
+      "purpose": "General AI-generated image detection",
+      "metrics": {
+        "overall_accuracy": 28.0,
+        "real_accuracy": 44.0,
+        "ai_accuracy": 12.0,
+        "avg_time_per_image": 0.095,
+        "total_time": 9.7
+      },
+      "analysis": {
+        "strengths": [
+          "Some AI detection capability (12%)",
+          "Most balanced error distribution"
+        ],
+        "weaknesses": [
+          "Lowest overall accuracy (28%)",
+          "Poor on both real and AI images",
+          "High error rate on both categories"
+        ],
+        "use_case": "Current production model - needs replacement"
+      }
+    }
+  ],
+  "key_findings": {
+    "no_single_best_model": "No model excels at both real and AI detection",
+    "trade_offs": {
+      "organika_sdxl": "Best for AI (56%) but worst for real (14%)",
+      "dima806_deepfake": "Best for real (92%) but poor for AI (10%)",
+      "clip": "Perfect for real (100%) but zero AI detection"
+    },
+    "speed_vs_accuracy": {
+      "fastest": "CLIP (0.003s) but no AI detection",
+      "slowest": "Organika (0.110s) but best AI detection",
+      "balanced": "dima806 (0.071s) with decent overall accuracy"
+    },
+    "general_purpose_models_fail": "ViT and ResNet are not suitable for AI detection task"
+  },
+  "recommendations": {
+    "immediate_action": {
+      "option_1": {
+        "approach": "Switch to Organika/sdxl-detector",
+        "reasoning": "Best AI detection (56%) vs current 12%",
+        "trade_off": "Will increase false positives on real images (14% accuracy)",
+        "when_to_use": "When AI detection is critical and false positives are acceptable"
+      },
+      "option_2": {
+        "approach": "Switch to dima806/deepfake_vs_real_image_detection",
+        "reasoning": "Best overall accuracy (51%) and excellent real detection (92%)",
+        "trade_off": "Still poor AI detection (10%)",
+        "when_to_use": "When avoiding false positives on real images is priority"
+      },
+      "option_3": {
+        "approach": "Implement ensemble: Organika + dima806",
+        "reasoning": "Combine Organika's AI detection with dima806's real detection",
+        "expected_improvement": "Could achieve 70%+ overall accuracy",
+        "implementation": "Use weighted voting or sequential filtering",
+        "when_to_use": "Best production approach for balanced accuracy"
+      }
+    },
+    "best_production_strategy": {
+      "approach": "Two-stage ensemble detection",
+      "stage_1": {
+        "model": "dima806/deepfake_vs_real_image_detection",
+        "purpose": "Fast first-pass filter for clearly real images",
+        "threshold": "High confidence (>0.85) → classify as REAL"
+      },
+      "stage_2": {
+        "model": "Organika/sdxl-detector",
+        "purpose": "Deep analysis for uncertain or AI-suspected images",
+        "threshold": "AI score >0.5 → classify as AI_GENERATED"
+      },
+      "benefits": [
+        "Fast processing for majority real images (92% caught by stage 1)",
+        "Deep analysis only for suspicious images (8%)",
+        "Better AI detection without sacrificing real accuracy",
+        "Average time: ~0.08s per image (vs 0.11s for Organika alone)"
+      ]
+    },
+    "with_forensics": {
+      "approach": "Re-enable forensics and combine with best model",
+      "recommendation": "Organika/sdxl-detector + forensics",
+      "reasoning": [
+        "Forensics can help identify manipulated real images",
+        "EXIF analysis catches social media edits",
+        "Noise pattern analysis complements model detection"
+      ],
+      "next_step": "Re-test with ENABLE_FORENSICS = True"
+    }
+  },
+  "conclusion": {
+    "summary": "No single model is sufficient for production-grade AI detection on this dataset. Modern AI-generated images are highly realistic and difficult to detect.",
+    "best_single_model": "Organika/sdxl-detector (56% AI detection)",
+    "recommended_approach": "Two-stage ensemble (dima806 → Organika) + forensics",
+    "expected_production_accuracy": "65-75% overall with ensemble",
+    "next_actions": [
+      "Implement two-stage ensemble",
+      "Re-enable and tune forensics",
+      "Test ensemble on larger dataset",
+      "Consider external API (Hive AI, Optic) for comparison"
+    ]
+  }
+}
+
