@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { jobQueue } from "../queue/jobQueue";
+import { jobQueue } from "../queue/bullQueue";
 import { BlockchainService } from "../services/blockchain";
 
 const router = Router();

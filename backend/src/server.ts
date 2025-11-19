@@ -1,7 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import { jobProcessor } from "./queue/processor";
+import { startBullProcessor, stopBullProcessor } from "./queue/bullProcessor";
 import uploadRoutes from "./routes/upload";
 import verifyRoutes from "./routes/verify";
 
@@ -46,19 +46,19 @@ app.listen(PORT, () => {
   console.log(`   - Verify: POST /api/verify`);
   console.log(`   - Attestation: GET /api/attestation/:attestationId`);
 
-  // Start job processor
-  jobProcessor.start();
+  // Start Bull processor
+  startBullProcessor();
 });
 
 // Graceful shutdown
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
-  jobProcessor.stop();
+  await stopBullProcessor();
   process.exit(0);
 });
 
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("SIGINT received, shutting down gracefully");
-  jobProcessor.stop();
+  await stopBullProcessor();
   process.exit(0);
 });

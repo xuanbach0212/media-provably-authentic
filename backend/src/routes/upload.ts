@@ -1,7 +1,7 @@
 import { MediaMetadata, VerificationJob } from "@media-auth/shared";
 import { Router } from "express";
 import multer from "multer";
-import { jobQueue } from "../queue/jobQueue";
+import { jobQueue } from "../queue/bullQueue";
 import { EncryptionService } from "../services/encryption";
 import { StorageService } from "../services/storage";
 import {
