@@ -122,15 +122,15 @@ class AIDetectionModels:
         for pred in all_predictions:
             model_key = pred["model"]
             predictions = pred["predictions"]
-            
+
             # Get AI score from predictions
             ai_score = self._extract_ai_score_from_predictions(predictions)
             individual_verdicts[model_key] = {
                 "ai_score": float(ai_score),
                 "verdict": "AI_GENERATED" if ai_score > 0.5 else "REAL",
-                "weight": pred["weight"]
+                "weight": pred["weight"],
             }
-        
+
         model_scores["individual_model_verdicts"] = individual_verdicts
 
         # Manipulation detection (from forensics)
