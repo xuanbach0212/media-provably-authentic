@@ -69,3 +69,6 @@ temp/
 # Redis dump
 dump.rdb
 
+# Test images
+test-images/
+

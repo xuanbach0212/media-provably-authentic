@@ -1,338 +1,472 @@
 <!-- 74dd8a6f-70df-4b6d-b9ec-6a03cdd0ff70 fe0badc4-c60c-446d-a14e-a32d61fef61b -->
-# Media Provably Authentic - Setup & Implementation Plan
+# Research & Implement Specialized AI Detection Models
 
-## Tech Stack Summary
+## Overview
 
-- **Frontend**: Next.js + TypeScript + Sui TypeScript SDK
-- **Backend API**: Node.js + Express
-- **AI Detection**: Python + Hugging Face models
-- **Reverse Search**: Python services
-- **Storage**: Mock Walrus → Testnet later
-- **Encryption**: Mock Seal KMS → Testnet later
-- **TEE**: Mock Nautilus → SGX/Real TEE later
-- **Blockchain**: Sui (local/mock → Testnet later)
+Systematically research and verify specialized AI detection models from HuggingFace, implement them with proper error handling, and test accuracy.
 
 ---
 
-## 🎯 Phase 1: Project Structure & Foundation (Mock Services)
+## 🔍 Phase 1: Model Research & Verification
 
-### 1.1 Initialize Monorepo Structure
+### 1.1 Research Candidate Models
+
+**Search Strategy:**
+
+1. HuggingFace search queries:
+
+                                                - "AI generated image detection"
+                                                - "deepfake detection"
+                                                - "synthetic image detection"
+                                                - "fake image classifier"
+                                                - "AI art detector"
+
+2. Check model cards for:
+
+                                                - Training dataset
+                                                - Model architecture
+                                                - Accuracy metrics
+                                                - Last update date
+                                                - Number of downloads
+                                                - License
+
+3. Priority models to test:
+   ```
+   Tier 1 (High priority):
+                           - umm-maybe/AI-image-detector
+                           - Organika/sdxl-detector
+                           - saltacc/anime-ai-detect
+                           - dima806/deepfake_vs_real_image_detection
+   
+   Tier 2 (Alternative):
+                           - Any CNN-based detection models
+                           - ResNet/EfficientNet fine-tuned for AI detection
+                           - CLIP fine-tuned models
+   
+   Tier 3 (Backup):
+                           - General vision models with custom prompting
+   ```
+
+
+### 1.2 Verify Model Availability
+
+For each candidate model:
+
+```python
+# Test script: verify_model.py
+from transformers import pipeline, AutoModel
+import requests
+
+def verify_model_exists(model_name):
+    """Check if model exists and is accessible"""
+    try:
+        # Check HuggingFace API
+        api_url = f"https://huggingface.co/api/models/{model_name}"
+        response = requests.get(api_url)
+        
+        if response.status_code == 200:
+            info = response.json()
+            print(f"✓ {model_name} exists")
+            print(f"  Downloads: {info.get('downloads', 0)}")
+            print(f"  Updated: {info.get('lastModified', 'unknown')}")
+            return True
+        else:
+            print(f"✗ {model_name} not found (status: {response.status_code})")
+            return False
+    except Exception as e:
+        print(f"✗ Error checking {model_name}: {e}")
+        return False
+
+def test_model_load(model_name):
+    """Try to actually load the model"""
+    try:
+        print(f"Testing load: {model_name}")
+        model = AutoModel.from_pretrained(model_name)
+        print(f"✓ {model_name} loaded successfully")
+        return True
+    except Exception as e:
+        print(f"✗ Cannot load {model_name}: {e}")
+        return False
+```
+
+---
+
+## 🧪 Phase 2: Model Testing & Evaluation
+
+### 2.1 Create Test Dataset
+
+Prepare test images:
 
 ```
-media-provably-authentic/
-├── frontend/              # Next.js + TypeScript
-├── backend/              # Node.js + Express API
-├── services/
-│   ├── ai-detection/     # Python + HuggingFace
-│   ├── reverse-search/   # Python reverse image search
-│   └── mock-services/    # Mock Walrus, Seal, Nautilus
-├── contracts/            # Sui Move smart contracts
-├── shared/               # Shared types/utils
-└── docs/                 # Existing documentation
+test_images/
+├── real/
+│   ├── real_photo_1.jpg (camera photo with EXIF)
+│   ├── real_photo_2.jpg (phone photo)
+│   └── real_photo_3.jpg (professional photo)
+├── ai_generated/
+│   ├── midjourney_v6.png
+│   ├── dalle3_output.png
+│   ├── stable_diffusion_xl.png
+│   └── old_gan_output.jpg
+└── manipulated/
+    ├── photoshop_edited.jpg
+    ├── face_swap.jpg
+    └── background_replaced.jpg
 ```
 
-### 1.2 Setup Mock Services
+### 2.2 Test Script for Each Model
 
-Create mock implementations for:
+```python
+# test_model_accuracy.py
+import torch
+from transformers import pipeline
+from PIL import Image
+import glob
+from pathlib import Path
 
-- **Mock Walrus**: Simple file storage API (returns blobID)
-- **Mock Seal KMS**: Basic encryption/decryption with local keys
-- **Mock Nautilus TEE**: Simulates enclave processing & signatures
-- **Mock Sui Contract**: In-memory attestation storage
+def test_model_accuracy(model_name, test_dir="test_images"):
+    """Test a model's accuracy on test dataset"""
+    
+    results = {
+        "model": model_name,
+        "total_tests": 0,
+        "correct": 0,
+        "by_category": {}
+    }
+    
+    try:
+        # Load model
+        classifier = pipeline("image-classification", model=model_name)
+        
+        # Test each category
+        for category in ["real", "ai_generated", "manipulated"]:
+            category_path = Path(test_dir) / category
+            if not category_path.exists():
+                continue
+            
+            images = list(category_path.glob("*.jpg")) + list(category_path.glob("*.png"))
+            correct = 0
+            
+            for img_path in images:
+                image = Image.open(img_path)
+                predictions = classifier(image)
+                
+                # Check if prediction matches expected category
+                top_pred = predictions[0]['label'].lower()
+                is_correct = check_prediction(top_pred, category)
+                
+                if is_correct:
+                    correct += 1
+                
+                results["total_tests"] += 1
+            
+            results["by_category"][category] = {
+                "total": len(images),
+                "correct": correct,
+                "accuracy": correct / len(images) if images else 0
+            }
+            results["correct"] += correct
+        
+        results["overall_accuracy"] = results["correct"] / results["total_tests"]
+        
+    except Exception as e:
+        results["error"] = str(e)
+    
+    return results
 
-### 1.3 Dependency Management
+def check_prediction(prediction, expected_category):
+    """Map prediction to expected category"""
+    # Custom mapping based on model's label format
+    real_keywords = ['real', 'natural', 'authentic', 'photograph']
+    ai_keywords = ['ai', 'generated', 'synthetic', 'fake', 'artificial']
+    manip_keywords = ['manipulated', 'edited', 'photoshop', 'altered']
+    
+    pred_lower = prediction.lower()
+    
+    if expected_category == "real":
+        return any(kw in pred_lower for kw in real_keywords)
+    elif expected_category == "ai_generated":
+        return any(kw in pred_lower for kw in ai_keywords)
+    elif expected_category == "manipulated":
+        return any(kw in pred_lower for kw in manip_keywords)
+    
+    return False
+```
 
-- `frontend/package.json`: Next.js, Sui TS SDK, React libraries
-- `backend/package.json`: Express, crypto, axios, job queue (Bull/BullMQ)
-- `services/ai-detection/requirements.txt`: transformers, torch, PIL
-- `services/reverse-search/requirements.txt`: requests, beautifulsoup4, selenium
-
----
-
-## 🎯 Phase 2: Backend Core (Node.js + Express)
-
-### 2.1 Gateway API Endpoints
-
-- `POST /api/upload` - Accept media upload, compute hash, encrypt
-- `POST /api/verify` - Submit verification job to queue
-- `GET /api/job/:jobId` - Check job status
-- `GET /api/attestation/:attestationId` - Get verification results
-- `GET /api/report/:reportCID` - Fetch full report from storage
-
-### 2.2 Job Queue System
-
-- Setup Bull/BullMQ with Redis (or in-memory for local dev)
-- Job processor for orchestrating verification pipeline
-- Job states: PENDING → PROCESSING → COMPLETED → FAILED
-
-### 2.3 Encryption Layer (Mock Seal)
-
-- Generate random CEK for each upload
-- Encrypt media with AES-256-GCM
-- Mock policy-based key wrapping
-- Store encrypted blobs in mock Walrus
-
-### 2.4 Integration Orchestrator
-
-- Coordinate calls to Python services (AI detection, reverse search)
-- Aggregate results from multiple services
-- Generate signed reports
-
----
-
-## 🎯 Phase 3: Python Services
-
-### 3.1 AI Detection Service (FastAPI)
-
-**Endpoints**:
-
-- `POST /detect` - Analyze media for AI-generated content
-
-**Models from Hugging Face**:
-
-- Image: `Organika/sdxl-detector` or `umm-maybe/AI-image-detector`
-- Deepfake detection: `dima806/deepfake_vs_real_image_detection`
-- CLIP-based analysis for manipulation detection
-
-**Output**:
+### 2.3 Benchmark Results Format
 
 ```json
 {
-  "verdict": "REAL" | "AI_GENERATED" | "MANIPULATED",
-  "confidence": 0.95,
-  "model_scores": {...},
-  "forensic_analysis": {...}
-}
-```
-
-### 3.2 Reverse Search Service (FastAPI)
-
-**Endpoints**:
-
-- `POST /search` - Reverse image/video search
-
-**Integrations**:
-
-- Google Reverse Image Search (via SerpAPI or scraping)
-- TinEye API
-- Bing Visual Search
-- Custom perceptual hash matching
-
-**Output**:
-
-```json
-{
-  "matches": [{
-    "url": "https://...",
-    "first_seen": "2024-01-01",
-    "similarity": 0.98,
-    "metadata": {...}
-  }],
-  "provenance_chain": [...]
-}
-```
-
-### 3.3 Metadata Crawler
-
-- Extract EXIF data from images
-- Parse video metadata
-- Crawl discovered URLs for timestamps, publisher info
-- Build provenance timeline
-
----
-
-## 🎯 Phase 4: Mock Enclave Processing
-
-### 4.1 Mock Nautilus TEE Service
-
-Simulate enclave behavior:
-
-- Accept jobs from backend queue
-- Request CEK from mock Seal
-- Decrypt media in "isolated" context
-- Call AI detection + reverse search services
-- Generate signed report with mock attestation
-- Upload report to mock Walrus
-- Submit minimal attestation to mock Sui
-
-### 4.2 Report Generation
-
-```json
-{
-  "jobId": "...",
-  "mediaCID": "...",
-  "mediaHash": "...",
-  "verdict": "AUTHENTIC" | "MANIPULATED" | "AI_GENERATED",
-  "confidence": 0.95,
-  "provenance": [...],
-  "ai_detection": {...},
-  "forensic_analysis": {...},
-  "enclave_attestation": {
-    "signature": "mock_sig_...",
-    "timestamp": "...",
-    "enclave_id": "mock_enclave_1"
-  }
+  "model_name": "example/ai-detector",
+  "test_date": "2024-01-15",
+  "overall_accuracy": 0.82,
+  "by_category": {
+    "real": {"accuracy": 0.85, "total": 10},
+    "ai_generated": {"accuracy": 0.90, "total": 10},
+    "manipulated": {"accuracy": 0.70, "total": 10}
+  },
+  "performance": {
+    "avg_inference_time": "1.2s",
+    "model_size": "500MB"
+  },
+  "verdict": "APPROVED" | "REJECTED"
 }
 ```
 
 ---
 
-## 🎯 Phase 5: Frontend (Next.js + TypeScript)
+## 🛠️ Phase 3: Implementation with Multi-Model Support
 
-### 5.1 Core Pages
+### 3.1 Create Flexible Model Loader
 
-- `/` - Landing page
-- `/upload` - Media upload interface
-- `/verify/:jobId` - Verification status & results
-- `/attestation/:attestationId` - Public attestation viewer
-- `/dashboard` - User dashboard with history
+```python
+# services/ai-detection/model_loader.py
+from typing import List, Dict, Optional
+from transformers import pipeline, AutoModel, AutoProcessor
+import logging
 
-### 5.2 Key Features
+logger = logging.getLogger(__name__)
 
-- Drag-and-drop file upload
-- Real-time job status updates (polling or WebSocket)
-- Provenance timeline visualization
-- AI detection confidence meters
-- Export legal evidence bundle (PDF)
-- Challenge/dispute interface (Phase 6)
 
-### 5.3 Sui Wallet Integration
+class ModelRegistry:
+    """Registry of verified AI detection models"""
+    
+    VERIFIED_MODELS = {
+        # Will be populated after testing phase
+        "primary": None,  # Best performing model
+        "secondary": None,  # Backup model
+        "fallback": None,  # Always-working model (CLIP)
+    }
+    
+    MODEL_CONFIGS = {
+        # Example config (will be updated with real models)
+        "example/ai-detector": {
+            "type": "image-classification",
+            "labels": {
+                "LABEL_0": "real",
+                "LABEL_1": "ai_generated"
+            },
+            "threshold": 0.7
+        }
+    }
+    
+    @classmethod
+    def load_best_available(cls) -> Dict:
+        """Load the best available model"""
+        models_to_try = [
+            cls.VERIFIED_MODELS.get("primary"),
+            cls.VERIFIED_MODELS.get("secondary"),
+            cls.VERIFIED_MODELS.get("fallback"),
+        ]
+        
+        for model_name in models_to_try:
+            if model_name:
+                try:
+                    logger.info(f"Attempting to load: {model_name}")
+                    model = pipeline("image-classification", model=model_name)
+                    logger.info(f"✓ Successfully loaded: {model_name}")
+                    return {
+                        "model": model,
+                        "name": model_name,
+                        "config": cls.MODEL_CONFIGS.get(model_name, {})
+                    }
+                except Exception as e:
+                    logger.warning(f"✗ Failed to load {model_name}: {e}")
+                    continue
+        
+        logger.error("No models could be loaded")
+        return None
+```
 
-- Integrate Sui Wallet adapter
-- Sign upload requests with user wallet
-- Display on-chain attestations
-- (Phase 6: actual testnet transactions)
+### 3.2 Update Detection Logic
 
-### 5.4 UI Components
-
-- Media viewer (image/video player)
-- Verification progress tracker
-- Results dashboard with charts
-- Provenance graph/timeline
-- Forensic details panel
+```python
+# services/ai-detection/models.py - Updated version
+class AIDetectionModels:
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model_info = None
+        self.forensic_analyzer = ForensicAnalyzer()
+        
+    def load_models(self):
+        """Load best available verified model"""
+        if self.model_info is None:
+            from model_loader import ModelRegistry
+            self.model_info = ModelRegistry.load_best_available()
+            
+            if self.model_info:
+                logger.info(f"Loaded model: {self.model_info['name']}")
+            else:
+                logger.warning("No HF models available, using forensics only")
+    
+    def detect(self, image: Image.Image, image_bytes: Optional[bytes] = None) -> dict:
+        """Detect with loaded model + forensics"""
+        self.load_models()
+        
+        # Forensics (always run)
+        forensics = self.forensic_analyzer.analyze(image, image_bytes)
+        
+        # Model prediction (if available)
+        if self.model_info and self.model_info["model"]:
+            model_result = self._predict_with_model(image)
+        else:
+            model_result = self._fallback_detection(forensics)
+        
+        # Combine signals
+        verdict, confidence = self._combine_signals(
+            model_result,
+            forensics
+        )
+        
+        return {
+            "verdict": verdict,
+            "confidence": confidence,
+            "modelScores": model_result,
+            "forensicAnalysis": forensics,
+            "model_used": self.model_info["name"] if self.model_info else "forensics_only"
+        }
+```
 
 ---
 
-## 🎯 Phase 6: Local Integration Testing
+## 📊 Phase 4: Documentation & Results
 
-### 6.1 End-to-End Flow Testing
+### 4.1 Document Findings
 
-1. Upload media through frontend
-2. Backend encrypts & stores in mock Walrus
-3. Job queued and processed by mock enclave
-4. Python services return AI + provenance data
-5. Report generated and stored
-6. Mock attestation created
-7. Frontend displays full results
+Create: `MODEL_RESEARCH_RESULTS.md`
 
-### 6.2 Multi-Enclave Simulation
+```markdown
+# AI Detection Models Research Results
 
-- Run multiple mock enclave instances
-- Implement simple consensus/aggregation
-- Test dispute/challenge flow
+## Tested Models
 
----
+### Model 1: [name]
+- **Status**: ✓ Working / ✗ Failed
+- **Accuracy**: 85%
+- **Pros**: Fast, accurate on modern AI
+- **Cons**: Large model size
+- **Verdict**: APPROVED
 
-## 🎯 Phase 7: Testnet Connection (Future Implementation)
+### Model 2: [name]
+...
 
-### 7.1 Walrus Testnet Setup
+## Recommended Setup
 
-- Get testnet credentials from Walrus docs
-- Replace mock storage with real Walrus SDK
-- Update blob upload/retrieval logic
-- Test encryption with real Walrus redundancy
+**Production**: Use [best model]
+**Fallback**: Use [backup model]
+**Final fallback**: Forensics + CLIP prompting
 
-### 7.2 Seal KMS Integration
+## Test Results Summary
+[Insert benchmark data]
+```
 
-- Setup Seal testnet account
-- Create key policies for enclaves
-- Integrate real CEK wrapping/unwrapping
-- Test attested decryption flow
+### 4.2 Update Configuration
 
-### 7.3 Sui Smart Contracts
+Based on findings, update `config.py`:
 
-Write Move contracts:
+```python
+# Final config after research
+MODELS = {
+    "primary": "verified/model-name",  # Best performer
+    "secondary": "backup/model-name",  # Backup
+    "fallback": "openai/clip-vit-base-patch32",  # Always works
+}
 
-- `ProvenanceAttestation.move` - Store media provenance
-- `IntegrityAttestation.move` - Store AI detection results
-- `TrustOracle.move` - Oracle registration, reputation, staking
-- `ChallengeDispute.move` - Challenge mechanism
-
-Deploy to Sui testnet and integrate with backend.
-
-### 7.4 Real Nautilus TEE
-
-- Setup SGX-enabled environment or cloud TEE
-- Deploy actual enclave code
-- Implement remote attestation
-- Connect to Seal KMS with attested channels
+USE_ENSEMBLE = True  # Combine multiple models
+MODEL_SELECTION = "auto"  # Auto-select best available
+```
 
 ---
 
-## 📋 Implementation Order
+## 🎯 Success Criteria
 
-For hackathon MVP, focus on:
+After this phase:
 
-1. ✅ Project structure + dependencies
-2. ✅ Mock services (Walrus, Seal, Nautilus, Sui)
-3. ✅ Backend API + job queue
-4. ✅ Python AI detection service (1-2 models)
-5. ✅ Python reverse search (basic Google/TinEye)
-6. ✅ Mock enclave processing
-7. ✅ Frontend upload + results display
-8. ✅ End-to-end demo flow
-
-Post-hackathon:
-
-- Real testnet integration (Phase 7)
-- Multi-enclave consensus
-- Challenge/dispute mechanism
-- Legal evidence export
-- Production hardening
+- ✅ At least 1 verified specialized model found
+- ✅ Accuracy > 75% on test dataset
+- ✅ Graceful fallback if model unavailable
+- ✅ Documentation of all tested models
+- ✅ Clear recommendation for production use
 
 ---
 
-## Key Files to Create
+## 📋 Implementation Checklist
 
-**Backend**:
+**Phase 1: Research** (2-3 hours)
 
-- `backend/src/server.ts` - Express app
-- `backend/src/routes/upload.ts` - Upload endpoint
-- `backend/src/services/encryption.ts` - Mock Seal integration
-- `backend/src/services/storage.ts` - Mock Walrus client
-- `backend/src/queue/processor.ts` - Job processing
-- `backend/src/services/orchestrator.ts` - Main verification logic
+- [ ] Search HuggingFace for candidate models
+- [ ] Check model cards and metadata
+- [ ] Create list of 10+ candidates
+- [ ] Verify each model exists and is accessible
 
-**Python Services**:
+**Phase 2: Testing** (2-3 hours)
 
-- `services/ai-detection/main.py` - FastAPI server
-- `services/ai-detection/models.py` - HuggingFace model loading
-- `services/reverse-search/main.py` - FastAPI server
-- `services/reverse-search/engines.py` - Search integrations
+- [ ] Prepare test image dataset (real/AI/manipulated)
+- [ ] Create testing script
+- [ ] Test each verified model
+- [ ] Benchmark accuracy and performance
+- [ ] Document results
 
-**Mock Services**:
+**Phase 3: Implementation** (1-2 hours)
 
-- `services/mock-services/walrus.ts` - Mock storage API
-- `services/mock-services/seal.ts` - Mock encryption
-- `services/mock-services/nautilus.ts` - Mock enclave
-- `services/mock-services/sui.ts` - Mock blockchain
+- [ ] Create ModelRegistry with verified models
+- [ ] Implement flexible model loader
+- [ ] Update detection logic
+- [ ] Add proper error handling
+- [ ] Test full integration
 
-**Frontend**:
+**Phase 4: Documentation** (1 hour)
 
-- `frontend/app/page.tsx` - Landing page
-- `frontend/app/upload/page.tsx` - Upload interface
-- `frontend/app/verify/[jobId]/page.tsx` - Results page
-- `frontend/components/MediaUploader.tsx`
-- `frontend/components/VerificationResults.tsx`
-- `frontend/lib/api.ts` - API client
+- [ ] Document all findings
+- [ ] Create usage guide
+- [ ] Update README
+- [ ] Provide recommendations
+
+**Total Time Estimate: 6-9 hours**
+
+---
+
+## ⚠️ Risk Mitigation
+
+**Risk 1: No specialized models found**
+
+- Mitigation: Fall back to CLIP + forensics
+- Document limitations clearly
+
+**Risk 2: Models require authentication**
+
+- Mitigation: Use HuggingFace token
+- Document setup process
+
+**Risk 3: Low accuracy**
+
+- Mitigation: Use ensemble approach
+- Consider external API as option
+
+**Risk 4: Large model sizes**
+
+- Mitigation: Implement lazy loading
+- Cache models locally
+
+---
+
+## 🚀 Next Steps After Completion
+
+If successful:
+
+1. Integrate with backend orchestrator
+2. Test end-to-end flow
+3. Prepare demo with real examples
+4. Document accuracy claims
+
+If unsuccessful:
+
+1. Pivot to external API (Hive AI)
+2. Or focus on provenance tracking
+3. Position forensics as "supporting evidence"
 
 ### To-dos
 
-- [ ] Initialize monorepo structure with frontend, backend, services folders
-- [ ] Create mock services for Walrus, Seal KMS, Nautilus TEE, and Sui
-- [ ] Setup Node.js + Express backend with API endpoints and job queue
-- [ ] Create Python FastAPI service for AI detection with HuggingFace models
-- [ ] Create Python FastAPI service for reverse image/video search
-- [ ] Implement mock enclave processing and report generation
-- [ ] Setup Next.js frontend with upload interface and results display
-- [ ] Test end-to-end flow from upload to attestation display
+- [x] 
+- [x] 
+- [x] 
