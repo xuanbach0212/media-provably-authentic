@@ -9,6 +9,7 @@ import axios from "axios";
 import { BlockchainService } from "./blockchain";
 import { EncryptionService } from "./encryption";
 import { StorageService } from "./storage";
+import { NautilusService } from "./nautilus";
 
 const AI_DETECTION_URL =
   process.env.AI_DETECTION_URL || "http://localhost:8001";
@@ -16,17 +17,20 @@ const REVERSE_SEARCH_URL =
   process.env.REVERSE_SEARCH_URL || "http://localhost:8002";
 const MOCK_SERVICES_URL =
   process.env.MOCK_SERVICES_URL || "http://localhost:3002";
+const USE_NAUTILUS_TEE = process.env.USE_NAUTILUS_TEE === "true";
 const ENCLAVE_ID = process.env.ENCLAVE_ID || "mock_enclave_1";
 
 export class OrchestrationService {
   private storage: StorageService;
   private encryption: EncryptionService;
   private blockchain: BlockchainService;
+  private nautilus: NautilusService | null;
 
   constructor() {
     this.storage = new StorageService();
     this.encryption = new EncryptionService();
     this.blockchain = new BlockchainService();
+    this.nautilus = USE_NAUTILUS_TEE ? new NautilusService() : null;
   }
 
   async processVerificationJob(
@@ -77,15 +81,37 @@ export class OrchestrationService {
       generatedAt: new Date().toISOString(),
     };
 
-    // 6. Sign the report with enclave
-    const reportHash = job.mediaHash; // In production, hash the entire report
-    const attestationResponse = await axios.post(
-      `${MOCK_SERVICES_URL}/nautilus/attest`,
-      {
-        dataHash: reportHash,
+    // 6. Sign the report with Nautilus TEE enclave
+    let enclaveSignature: string;
+    
+    if (this.nautilus) {
+      try {
+        enclaveSignature = await this.nautilus.generateAttestation(report);
+        console.log("[Orchestrator] ✓ Report signed by Nautilus enclave");
+      } catch (error: any) {
+        console.error("[Orchestrator] Nautilus signing failed, using mock:", error.message);
+        // Fallback to mock
+        const attestationResponse = await axios.post(
+          `${MOCK_SERVICES_URL}/nautilus/attest`,
+          { dataHash: job.mediaHash }
+        );
+        enclaveSignature = attestationResponse.data.attestation.signature;
       }
-    );
-    report.enclaveAttestation = attestationResponse.data.attestation;
+    } else {
+      // Use mock service
+      const attestationResponse = await axios.post(
+        `${MOCK_SERVICES_URL}/nautilus/attest`,
+        { dataHash: job.mediaHash }
+      );
+      enclaveSignature = attestationResponse.data.attestation.signature;
+    }
+    
+    report.enclaveAttestation = {
+      signature: enclaveSignature,
+      enclaveId: ENCLAVE_ID,
+      timestamp: new Date().toISOString(),
+      mrenclave: this.nautilus?.getEnclaveInfo().mrenclave || `mock_mrenclave_${ENCLAVE_ID}`,
+    };
 
     // 7. Store report in Walrus
     const reportJSON = JSON.stringify(report);
