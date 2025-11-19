@@ -1,0 +1,31 @@
+{
+  "name": "media-provably-authentic",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Provably Authentic Media Verification System",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "services/mock-services",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:mock-services\" \"npm run dev:ai\" \"npm run dev:reverse-search\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:mock-services": "cd services/mock-services && npm run dev",
+    "dev:ai": "cd services/ai-detection && python -m uvicorn main:app --reload --port 8001",
+    "dev:reverse-search": "cd services/reverse-search && python -m uvicorn main:app --reload --port 8002",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ../services/mock-services && npm install",
+    "install:python": "cd services/ai-detection && pip install -r requirements.txt && cd ../reverse-search && pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+
