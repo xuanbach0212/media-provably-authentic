@@ -8,6 +8,7 @@ import { VerificationJob } from "@media-auth/shared";
 import { OrchestrationService } from "../services/orchestrator";
 import { AggregatorService } from "../services/aggregator";
 import verificationQueue, { jobQueue, reportStore } from "./bullQueue";
+import { SocketManager } from "../services/socketManager";
 
 const NUM_WORKERS = parseInt(process.env.NUM_ENCLAVE_WORKERS || "3");
 const ORACLE_REPUTATION_BASE = parseFloat(process.env.ORACLE_REPUTATION || "0.8");
@@ -74,13 +75,41 @@ class MultiWorkerProcessor {
     );
 
     try {
-      await job.progress(10);
+      // Stage 3: Dispatching to Enclaves (20-30%)
+      await job.progress(20);
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 3,
+        stageName: "Dispatching to Enclaves",
+        substep: `Creating ${NUM_WORKERS} enclave verification tasks...`,
+        progress: 20,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Stage 4: Enclave Processing (30-75%)
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 4,
+        stageName: "Enclave Processing",
+        substep: "Starting parallel enclave verification...",
+        progress: 30,
+        timestamp: new Date().toISOString(),
+      });
 
       // Process with all enclaves in parallel
-      const enclavePromises = this.workers.map(async (worker) => {
-        const { enclaveId, reputation, stake } = worker;
+      const enclavePromises = this.workers.map(async (worker, index) => {
+        const { enclaveId, reputation, stake, workerId } = worker;
         
         console.log(`[MultiWorker] Enclave ${enclaveId} starting verification...`);
+        
+        // Emit enclave start
+        const enclaveProgress = 30 + (index * 15); // Distribute 30-75% across enclaves
+        SocketManager.emitProgress(verificationJob.jobId, {
+          stage: 4,
+          stageName: "Enclave Processing",
+          substep: `Enclave ${workerId}/${NUM_WORKERS}: Retrieving and decrypting media...`,
+          progress: enclaveProgress,
+          timestamp: new Date().toISOString(),
+          metadata: { enclaveId },
+        });
 
         // Get or create orchestrator for this enclave
         if (!this.orchestrators.has(enclaveId)) {
@@ -91,8 +120,28 @@ class MultiWorkerProcessor {
         }
         const orchestrator = this.orchestrators.get(enclaveId)!;
 
+        // Emit AI detection progress
+        SocketManager.emitProgress(verificationJob.jobId, {
+          stage: 4,
+          stageName: "Enclave Processing",
+          substep: `Enclave ${workerId}/${NUM_WORKERS}: Running AI detection models...`,
+          progress: enclaveProgress + 5,
+          timestamp: new Date().toISOString(),
+          metadata: { enclaveId },
+        });
+
         // Process verification
         const report = await orchestrator.processVerificationJob(verificationJob);
+        
+        // Emit enclave completion
+        SocketManager.emitProgress(verificationJob.jobId, {
+          stage: 4,
+          stageName: "Enclave Processing",
+          substep: `Enclave ${workerId}/${NUM_WORKERS}: Completed (${report.verdict})`,
+          progress: enclaveProgress + 15,
+          timestamp: new Date().toISOString(),
+          metadata: { enclaveId },
+        });
         
         console.log(
           `[MultiWorker] Enclave ${enclaveId} completed: verdict=${report.verdict}, ` +
@@ -113,11 +162,28 @@ class MultiWorkerProcessor {
 
       // Wait for all enclaves to complete
       const results = await Promise.all(enclavePromises);
-      await job.progress(80);
+      
+      // Stage 5: Computing Consensus (75-90%)
+      await job.progress(75);
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 5,
+        stageName: "Computing Consensus",
+        substep: "Collecting reports from all enclaves...",
+        progress: 75,
+        timestamp: new Date().toISOString(),
+      });
 
       console.log(
         `[MultiWorker] All ${NUM_WORKERS} enclaves completed for job ${verificationJob.jobId}`
       );
+
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 5,
+        stageName: "Computing Consensus",
+        substep: "Computing weighted votes from enclave verdicts...",
+        progress: 80,
+        timestamp: new Date().toISOString(),
+      });
 
       // Compute consensus
       const consensus = await this.aggregator.computeConsensus(verificationJob.jobId);
@@ -126,7 +192,23 @@ class MultiWorkerProcessor {
         throw new Error("Failed to reach consensus");
       }
 
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 5,
+        stageName: "Computing Consensus",
+        substep: `Consensus reached: ${consensus.finalVerdict} (${(consensus.agreementRate * 100).toFixed(0)}% agreement)`,
+        progress: 85,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Stage 6: Blockchain Attestation (90-100%)
       await job.progress(90);
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 6,
+        stageName: "Blockchain Attestation",
+        substep: "Storing final report on Walrus...",
+        progress: 90,
+        timestamp: new Date().toISOString(),
+      });
 
       // Create final report with consensus
       const finalReport = {
@@ -159,6 +241,14 @@ class MultiWorkerProcessor {
         finalReport
       );
 
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 6,
+        stageName: "Blockchain Attestation",
+        substep: "Submitting attestation to Sui blockchain...",
+        progress: 95,
+        timestamp: new Date().toISOString(),
+      });
+
       // Add storage and blockchain info to final report
       finalReport.reportStorageCID = reportCID;
       finalReport.blockchainAttestation = blockchainAttestation;
@@ -166,7 +256,18 @@ class MultiWorkerProcessor {
       // Store final report
       await reportStore.storeReport(verificationJob.jobId, finalReport);
 
+      // Emit completion
       await job.progress(100);
+      SocketManager.emitProgress(verificationJob.jobId, {
+        stage: 6,
+        stageName: "Completed",
+        substep: "Verification complete! Report attested on blockchain.",
+        progress: 100,
+        timestamp: new Date().toISOString(),
+      });
+
+      SocketManager.emitComplete(verificationJob.jobId, finalReport);
+
       return finalReport;
       
     } catch (error: any) {
@@ -174,6 +275,16 @@ class MultiWorkerProcessor {
         `[MultiWorker] Failed to process job ${verificationJob.jobId}:`,
         error.message
       );
+      
+      // Emit error to socket
+      SocketManager.emitError(verificationJob.jobId, {
+        stage: 0,
+        message: error.message || "Verification failed",
+        retryable: true,
+        timestamp: new Date().toISOString(),
+        details: error.stack,
+      });
+      
       throw error;
     }
   }
