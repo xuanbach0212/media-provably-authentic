@@ -1,9 +1,9 @@
 import {
   AIDetectionResult,
   ProvenanceResult,
-  Verdict,
   VerificationJob,
   VerificationReport,
+  AnalysisData,
 } from "@media-auth/shared";
 import axios from "axios";
 import { BlockchainService } from "./blockchain";
@@ -48,34 +48,39 @@ export class OrchestrationService {
       this.enclaveId
     );
 
-    // 2. Run AI detection
+    // 2. Run AI detection first
+    console.log(`[Orchestrator] Running AI detection...`);
     const aiDetection = await this.runAIDetection(decryptedMedia);
+    console.log(`[Orchestrator] AI ensemble score: ${aiDetection.ensembleScore}`);
 
-    // 3. Run reverse search for provenance
-    const reverseSearch = await this.runReverseSearch(
-      decryptedMedia,
-      job.metadata
-    );
+    // 3. Conditionally run reverse search based on AI ensemble score
+    // Only run if score suggests potential fake (< 0.5) or high confidence real (> 0.8)
+    let reverseSearch: ProvenanceResult | null = null;
+    if (aiDetection.ensembleScore < 0.5 || aiDetection.ensembleScore > 0.8) {
+      console.log(`[Orchestrator] Running reverse search (score threshold met)...`);
+      reverseSearch = await this.runReverseSearch(decryptedMedia, job.metadata);
+      console.log(`[Orchestrator] Found ${reverseSearch.matches.length} matches`);
+    } else {
+      console.log(`[Orchestrator] Skipping reverse search (score: ${aiDetection.ensembleScore})`);
+    }
 
-    // 4. Determine verdict based on results
-    const verdict = this.determineVerdict(aiDetection, reverseSearch);
-    const confidence = this.calculateConfidence(aiDetection, reverseSearch);
-
-    // 5. Generate report
-    const report: VerificationReport = {
-      jobId: job.jobId,
-      mediaCID: job.mediaCID,
-      mediaHash: job.mediaHash,
-      verdict,
-      confidence,
-      provenance: reverseSearch,
-      reverseSearch: reverseSearch,
+    // 4. Build analysis data (NO verdict determination)
+    const analysisData: AnalysisData = {
       aiDetection,
+      reverseSearch,
       forensicAnalysis: {
         fileSize: job.metadata.size,
         mimeType: job.metadata.mimeType,
         uploadedAt: job.metadata.uploadedAt,
       },
+    };
+
+    // 5. Generate report with raw analysis data
+    const report: VerificationReport = {
+      jobId: job.jobId,
+      mediaCID: job.mediaCID,
+      mediaHash: job.mediaHash,
+      analysisData,
       enclaveAttestation: {
         signature: "",
         timestamp: new Date().toISOString(),
@@ -108,7 +113,7 @@ export class OrchestrationService {
     report.encryptionMetadata = job.encryptionMeta;
 
     console.log(
-      `[Orchestrator] Job ${job.jobId} completed with verdict: ${verdict}`
+      `[Orchestrator] Job ${job.jobId} completed - ensemble score: ${aiDetection.ensembleScore}`
     );
     return report;
   }
@@ -118,7 +123,7 @@ export class OrchestrationService {
   ): Promise<AIDetectionResult> {
     try {
       const response = await axios.post(
-        `${AI_DETECTION_URL}/detect`,
+        `${AI_DETECTION_URL}/detect/base64`,
         {
           media: mediaBuffer.toString("base64"),
         },
@@ -132,10 +137,25 @@ export class OrchestrationService {
       console.error("AI detection failed:", error.message);
       // Return a default result if AI detection fails
       return {
-        verdict: "REAL",
-        confidence: 0.5,
         modelScores: {},
+        ensembleScore: 0.5,
         forensicAnalysis: {
+          exifData: {},
+          compressionArtifacts: 0,
+          noisePattern: {},
+          colorDistribution: {},
+          error: error.message,
+        },
+        frequencyAnalysis: {
+          dctAnalysis: {},
+          fftAnalysis: {},
+        },
+        qualityMetrics: {
+          sharpness: 0,
+          brightness: 0,
+          contrast: 0,
+        },
+        metadata: {
           error: error.message,
         },
       };
@@ -170,40 +190,4 @@ export class OrchestrationService {
     }
   }
 
-  private determineVerdict(
-    aiDetection: AIDetectionResult,
-    provenance: ProvenanceResult
-  ): Verdict {
-    // Simple logic - can be enhanced with more sophisticated rules
-    if (
-      aiDetection.verdict === "AI_GENERATED" &&
-      aiDetection.confidence > 0.7
-    ) {
-      return "AI_GENERATED";
-    }
-
-    if (aiDetection.verdict === "MANIPULATED" && aiDetection.confidence > 0.7) {
-      return "MANIPULATED";
-    }
-
-    if (provenance.matches.length > 0 && provenance.confidence > 0.6) {
-      return "AUTHENTIC";
-    }
-
-    return "UNKNOWN";
-  }
-
-  private calculateConfidence(
-    aiDetection: AIDetectionResult,
-    provenance: ProvenanceResult
-  ): number {
-    // Weighted average of different confidence scores
-    const aiWeight = 0.6;
-    const provenanceWeight = 0.4;
-
-    return (
-      aiDetection.confidence * aiWeight +
-      provenance.confidence * provenanceWeight
-    );
-  }
 }

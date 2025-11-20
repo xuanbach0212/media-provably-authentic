@@ -137,15 +137,14 @@ class MultiWorkerProcessor {
         SocketManager.emitProgress(verificationJob.jobId, {
           stage: 4,
           stageName: "Enclave Processing",
-          substep: `Enclave ${workerId}/${NUM_WORKERS}: Completed (${report.verdict})`,
+          substep: `Enclave ${workerId}/${NUM_WORKERS}: Completed (score: ${report.analysisData.aiDetection.ensembleScore.toFixed(2)})`,
           progress: enclaveProgress + 15,
           timestamp: new Date().toISOString(),
           metadata: { enclaveId },
         });
         
         console.log(
-          `[MultiWorker] Enclave ${enclaveId} completed: verdict=${report.verdict}, ` +
-          `confidence=${(report.confidence * 100).toFixed(1)}%`
+          `[MultiWorker] Enclave ${enclaveId} completed: ensemble score=${report.analysisData.aiDetection.ensembleScore.toFixed(3)}`
         );
 
         // Submit report to aggregator
@@ -195,7 +194,7 @@ class MultiWorkerProcessor {
       SocketManager.emitProgress(verificationJob.jobId, {
         stage: 5,
         stageName: "Computing Consensus",
-        substep: `Consensus reached: ${consensus.finalVerdict} (${(consensus.agreementRate * 100).toFixed(0)}% agreement)`,
+        substep: `Analysis complete: avg ensemble score ${consensus.averageEnsembleScore.toFixed(2)}`,
         progress: 85,
         timestamp: new Date().toISOString(),
       });
@@ -210,28 +209,13 @@ class MultiWorkerProcessor {
         timestamp: new Date().toISOString(),
       });
 
-      // Create final report with consensus
+      // Create final report (just use first enclave's report - all should have similar results)
       const finalReport = {
-        ...results[0].report, // Use first report as base
-        verdict: consensus.finalVerdict,
-        confidence: consensus.confidence,
-        consensusMetadata: {
-          agreementRate: consensus.agreementRate,
-          participatingEnclaves: consensus.reports.length,
-          consensusTimestamp: consensus.consensusTimestamp,
-          enclaveReports: results.map(r => ({
-            enclaveId: r.enclaveId,
-            verdict: r.report.verdict,
-            confidence: r.report.confidence,
-            reputation: r.reputation,
-            stake: r.stake,
-          })),
-        },
+        ...results[0].report,
       };
 
       console.log(
-        `[MultiWorker] Consensus: verdict=${consensus.finalVerdict}, ` +
-        `agreement=${(consensus.agreementRate * 100).toFixed(1)}%`
+        `[MultiWorker] Processing complete with ${results.length} enclave reports`
       );
 
       // Finalize: Store to Walrus and submit to blockchain (single upload, no race condition)

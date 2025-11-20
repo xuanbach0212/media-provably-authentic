@@ -3,7 +3,7 @@
  * Collects reports from multiple enclaves and computes consensus verdict
  */
 
-import { VerificationReport, Verdict, BlockchainAttestation } from "@media-auth/shared";
+import { VerificationReport, BlockchainAttestation } from "@media-auth/shared";
 import crypto from "crypto";
 import { StorageService } from "./storage";
 import { BlockchainService } from "./blockchain";
@@ -17,11 +17,9 @@ interface EnclaveReport {
 }
 
 interface ConsensusResult {
-  finalVerdict: Verdict;
-  confidence: number;
-  agreementRate: number;
   reports: EnclaveReport[];
   consensusTimestamp: string;
+  averageEnsembleScore: number;
 }
 
 export class AggregatorService {
@@ -85,58 +83,22 @@ export class AggregatorService {
 
     console.log(`[Aggregator] Computing consensus for job ${jobId} from ${reports.length} enclaves`);
 
-    // Weighted voting based on reputation and stake
-    const verdictVotes: Map<Verdict, number> = new Map();
-    let totalWeight = 0;
+    // Calculate average ensemble score from all enclaves
+    const totalEnsembleScore = reports.reduce((sum, enclaveReport) => {
+      const score = enclaveReport.report.analysisData.aiDetection.ensembleScore;
+      console.log(`[Aggregator] Enclave ${enclaveReport.enclaveId}: ensemble score=${score.toFixed(3)}`);
+      return sum + score;
+    }, 0);
 
-    reports.forEach((enclaveReport) => {
-      const { report, reputation, stake } = enclaveReport;
-      const weight = this.calculateWeight(reputation, stake);
-      
-      const currentVotes = verdictVotes.get(report.verdict) || 0;
-      verdictVotes.set(report.verdict, currentVotes + weight);
-      totalWeight += weight;
-
-      console.log(
-        `[Aggregator] Enclave ${enclaveReport.enclaveId}: ` +
-        `verdict=${report.verdict}, weight=${weight.toFixed(2)}`
-      );
-    });
-
-    // Determine winning verdict
-    let winningVerdict: Verdict = "UNKNOWN";
-    let maxVotes = 0;
-
-    verdictVotes.forEach((votes, verdict) => {
-      if (votes > maxVotes) {
-        maxVotes = votes;
-        winningVerdict = verdict;
-      }
-    });
-
-    // Calculate agreement rate
-    const agreementRate = maxVotes / totalWeight;
+    const averageEnsembleScore = totalEnsembleScore / reports.length;
     
     console.log(
-      `[Aggregator] Consensus: verdict=${winningVerdict}, ` +
-      `agreement=${(agreementRate * 100).toFixed(1)}%, ` +
-      `threshold=${(this.consensusThreshold * 100)}%`
+      `[Aggregator] Average ensemble score: ${averageEnsembleScore.toFixed(3)} ` +
+      `(from ${reports.length} enclaves)`
     );
 
-    // Check if consensus threshold is met
-    if (agreementRate < this.consensusThreshold) {
-      console.warn(`[Aggregator] Consensus threshold not met (${agreementRate} < ${this.consensusThreshold})`);
-      // In production, might trigger additional verification
-    }
-
-    // Calculate average confidence from reports with winning verdict
-    const matchingReports = reports.filter(r => r.report.verdict === winningVerdict);
-    const avgConfidence = matchingReports.reduce((sum, r) => sum + r.report.confidence, 0) / matchingReports.length;
-
     const consensus: ConsensusResult = {
-      finalVerdict: winningVerdict,
-      confidence: avgConfidence,
-      agreementRate,
+      averageEnsembleScore,
       reports,
       consensusTimestamp: new Date().toISOString(),
     };
@@ -173,7 +135,6 @@ export class AggregatorService {
       jobId,
       mediaHash,
       reportCID,
-      consensusReport.verdict,
       enclaveSignature
     );
     console.log(

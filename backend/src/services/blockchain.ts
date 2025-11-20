@@ -1,4 +1,4 @@
-import { BlockchainAttestation, Verdict } from "@media-auth/shared";
+import { BlockchainAttestation } from "@media-auth/shared";
 import { SuiService } from "./sui";
 
 export class BlockchainService {
@@ -14,7 +14,6 @@ export class BlockchainService {
     jobId: string,
     mediaHash: string,
     reportCID: string,
-    verdict: Verdict,
     enclaveSignature: string
   ): Promise<BlockchainAttestation> {
     // Sui service has built-in fallback to mock
@@ -23,7 +22,6 @@ export class BlockchainService {
         jobId,
         mediaHash,
         reportCID,
-        verdict,
         enclaveSignature
       );
     } catch (error: any) {

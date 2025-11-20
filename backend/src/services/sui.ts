@@ -3,7 +3,7 @@
  * For immutable attestation storage
  */
 
-import { BlockchainAttestation, Verdict } from "@media-auth/shared";
+import { BlockchainAttestation } from "@media-auth/shared";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -69,7 +69,6 @@ export class SuiService {
     jobId: string,
     mediaHash: string,
     reportCID: string,
-    verdict: Verdict,
     enclaveSignature: string
   ): Promise<BlockchainAttestation> {
     if (!this.keypair) {
@@ -97,7 +96,6 @@ export class SuiService {
         tx.pure.string(jobId),
         tx.pure.string(mediaHash),
         tx.pure.string(reportCID),
-        tx.pure.string(verdict),
         tx.pure.string(enclaveSignature),
         tx.object(clock),
       ],
