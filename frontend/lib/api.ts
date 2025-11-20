@@ -28,11 +28,16 @@ export interface VerifyResponse {
 }
 
 export class ApiClient {
-  static async uploadMedia(file: File, userId: string = 'anonymous'): Promise<UploadResponse> {
+  static async uploadMedia(
+    file: File,
+    walletAddress: string = 'anonymous',
+    signature: string = 'mock_signature'
+  ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('userId', userId);
-    formData.append('signature', 'mock_signature');
+    formData.append('userId', walletAddress);
+    formData.append('walletAddress', walletAddress);
+    formData.append('signature', signature);
 
     const response = await fetch(`${API_BASE_URL}/api/upload`, {
       method: 'POST',
@@ -45,6 +50,17 @@ export class ApiClient {
     }
 
     return response.json();
+  }
+  
+  static async retryJob(jobId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/job/${jobId}/retry`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Retry failed');
+    }
   }
 
   static async getJobStatus(jobId: string): Promise<JobStatusResponse> {

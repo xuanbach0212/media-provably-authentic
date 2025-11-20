@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MediaUploader from '@/components/MediaUploader';
+import { WalletConnect } from '@/components/WalletConnect';
 
 export default function Home() {
   const router = useRouter();
 
-  const handleUploadComplete = (jobId: string) => {
+  const handleUploadComplete = (jobId: string, walletAddress: string, signature: string) => {
+    // Store wallet info in session storage for VerificationResults
+    sessionStorage.setItem('walletAddress', walletAddress);
+    sessionStorage.setItem('signature', signature);
     router.push(`/verify/${jobId}`);
   };
 
@@ -15,7 +19,10 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
+          <div className="flex justify-end mb-4">
+            <WalletConnect />
+          </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             Media Provably Authentic
           </h1>

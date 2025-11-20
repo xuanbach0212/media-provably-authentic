@@ -2,12 +2,16 @@
 
 import { useState, useCallback } from 'react';
 import { ApiClient } from '@/lib/api';
+import { useCurrentAccount, useSignPersonalMessage } from '@mysten/dapp-kit';
 
 interface MediaUploaderProps {
-  onUploadComplete: (jobId: string) => void;
+  onUploadComplete: (jobId: string, walletAddress: string, signature: string) => void;
 }
 
 export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) {
+  const account = useCurrentAccount();
+  const { mutate: signMessage } = useSignPersonalMessage();
+  
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -68,17 +72,52 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
   const handleUpload = async () => {
     if (!file) return;
 
+    // Check wallet connection
+    if (!account) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
     try {
-      const response = await ApiClient.uploadMedia(file);
-      console.log('Upload successful:', response);
-      onUploadComplete(response.jobId);
+      // Sign message with wallet
+      const message = `Upload media for verification: ${file.name} (${new Date().toISOString()})`;
+      const messageBytes = new TextEncoder().encode(message);
+
+      signMessage(
+        { message: messageBytes },
+        {
+          onSuccess: async (result) => {
+            try {
+              console.log('[MediaUploader] Message signed successfully');
+              
+              // Upload with signature
+              const response = await ApiClient.uploadMedia(
+                file,
+                account.address,
+                result.signature
+              );
+              
+              console.log('[MediaUploader] Upload successful:', response);
+              onUploadComplete(response.jobId, account.address, result.signature);
+            } catch (err: any) {
+              setError(err.message || 'Upload failed');
+              console.error('[MediaUploader] Upload error:', err);
+              setUploading(false);
+            }
+          },
+          onError: (err) => {
+            setError('Failed to sign message: ' + err.message);
+            console.error('[MediaUploader] Signing error:', err);
+            setUploading(false);
+          },
+        }
+      );
     } catch (err: any) {
       setError(err.message || 'Upload failed');
-      console.error('Upload error:', err);
-    } finally {
+      console.error('[MediaUploader] Upload error:', err);
       setUploading(false);
     }
   };
@@ -170,12 +209,20 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
         </div>
       )}
 
-      {file && !uploading && (
+      {!account && (
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+          <p className="text-sm text-yellow-800">
+            Please connect your Sui wallet to upload and verify media
+          </p>
+        </div>
+      )}
+
+      {file && !uploading && account && (
         <button
           onClick={handleUpload}
           className="mt-6 w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
         >
-          Verify Authenticity
+          Sign & Verify Authenticity
         </button>
       )}
 
