@@ -122,6 +122,18 @@ async def detect(request: DetectionRequest):
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
+        # Validate and resize image
+        MIN_SIZE = 224  # Minimum size for most models
+        
+        # Resize if too small (pad to minimum size)
+        if image.width < MIN_SIZE or image.height < MIN_SIZE:
+            logger.warning(f"Image too small ({image.size}), padding to {MIN_SIZE}x{MIN_SIZE}")
+            new_image = Image.new('RGB', (MIN_SIZE, MIN_SIZE), (255, 255, 255))
+            # Center the image
+            offset = ((MIN_SIZE - image.width) // 2, (MIN_SIZE - image.height) // 2)
+            new_image.paste(image, offset)
+            image = new_image
+        
         # Resize if too large
         if image.width > config.MAX_IMAGE_SIZE[0] or image.height > config.MAX_IMAGE_SIZE[1]:
             logger.info(f"Resizing image from {image.size} to {config.MAX_IMAGE_SIZE}")
