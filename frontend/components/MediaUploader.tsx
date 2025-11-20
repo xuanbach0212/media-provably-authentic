@@ -123,10 +123,10 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6">
+    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center ${
-          dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+        className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center ${
+          dragActive ? 'border-blue-500 bg-blue-900/20' : 'border-dark-border'
         } ${file ? 'border-green-500' : ''}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -140,13 +140,14 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
           accept="image/*,video/*"
           onChange={handleChange}
           disabled={uploading}
+          multiple
         />
 
         {!preview ? (
           <label htmlFor="file-upload" className="cursor-pointer">
             <div className="space-y-4">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-dark-muted"
                 stroke="currentColor"
                 fill="none"
                 viewBox="0 0 48 48"
@@ -176,17 +177,17 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
               <img
                 src={preview}
                 alt="Preview"
-                className="max-h-64 mx-auto rounded"
+                className="max-h-64 mx-auto rounded border border-dark-border"
               />
             )}
             {file?.type.startsWith('video/') && (
               <video
                 src={preview}
-                className="max-h-64 mx-auto rounded"
+                className="max-h-64 mx-auto rounded border border-dark-border"
                 controls
               />
             )}
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-dark-text">
               {file?.name} ({(file!.size / 1024 / 1024).toFixed(2)} MB)
             </div>
             <button
@@ -194,7 +195,7 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
                 setFile(null);
                 setPreview(null);
               }}
-              className="text-sm text-red-600 hover:text-red-700"
+              className="text-sm text-red-400 hover:text-red-300"
               disabled={uploading}
             >
               Remove
@@ -204,14 +205,14 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
       </div>
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mt-4 p-3 bg-red-900/20 border border-red-900 rounded text-red-400 text-sm">
           {error}
         </div>
       )}
 
       {!account && (
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-900 rounded-lg text-center">
+          <p className="text-sm text-yellow-400">
             Please connect your Sui wallet to upload and verify media
           </p>
         </div>
@@ -229,7 +230,7 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
       {uploading && (
         <div className="mt-6 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-2 text-gray-600">Uploading and encrypting...</p>
+          <p className="mt-2 text-dark-muted">Uploading and encrypting...</p>
         </div>
       )}
     </div>

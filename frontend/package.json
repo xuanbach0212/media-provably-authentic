@@ -12,10 +12,12 @@
     "@mysten/dapp-kit": "^0.19.9",
     "@mysten/sui": "^1.45.0",
     "@tanstack/react-query": "^5.90.10",
+    "@types/recharts": "^1.8.29",
     "next": "16.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-icons": "^5.5.0",
+    "recharts": "^3.4.1",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
