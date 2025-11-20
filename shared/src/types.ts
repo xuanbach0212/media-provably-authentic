@@ -14,10 +14,15 @@ export interface MediaMetadata {
 }
 
 export interface EncryptionMetadata {
-  cek: string; // Content Encryption Key (encrypted)
+  cek?: string; // Content Encryption Key (encrypted)
   iv: string;
   algorithm: string;
   policyId: string;
+  keyId?: string;
+  authTag?: string; // For GCM mode
+  threshold?: number; // For threshold encryption
+  _mockKey?: string; // For mock mode only
+  [key: string]: any; // Allow additional fields
 }
 
 export interface VerificationJob {
@@ -79,19 +84,35 @@ export interface VerificationReport {
   verdict: Verdict;
   confidence: number;
   provenance: ProvenanceResult;
+  reverseSearch?: ProvenanceResult; // Alias for provenance
   aiDetection: AIDetectionResult;
   forensicAnalysis: Record<string, any>;
   enclaveAttestation: EnclaveAttestation;
   generatedAt: string;
+  reportStorageCID?: string; // Walrus CID for the report itself
+  blockchainAttestation?: BlockchainAttestation; // On-chain attestation
+  encryptionMetadata?: EncryptionMetadata; // Encryption info
+  consensusMetadata?: {
+    agreementRate: number;
+    participatingEnclaves: number;
+    consensusTimestamp: string;
+    enclaveReports: Array<{
+      enclaveId: string;
+      verdict: Verdict;
+      confidence: number;
+      reputation: number;
+      stake: number;
+    }>;
+  };
 }
 
 export interface BlockchainAttestation {
   attestationId: string;
-  jobId: string;
-  mediaHash: string;
-  reportCID: string;
-  verdict: Verdict;
-  enclaveSignature: string;
+  jobId?: string;
+  mediaHash?: string;
+  reportCID?: string;
+  verdict?: Verdict;
+  enclaveSignature?: string;
   timestamp: string;
   blockNumber?: number;
   txHash?: string;
