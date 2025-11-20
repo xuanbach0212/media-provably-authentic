@@ -82,6 +82,7 @@ export default function VerificationResults({ jobId }: VerificationResultsProps)
   const getVerdictColor = (verdict: string) => {
     switch (verdict) {
       case 'AUTHENTIC':
+      case 'REAL':
         return 'text-green-700 bg-green-100 border-green-300';
       case 'AI_GENERATED':
         return 'text-orange-700 bg-orange-100 border-orange-300';
@@ -91,6 +92,20 @@ export default function VerificationResults({ jobId }: VerificationResultsProps)
         return 'text-gray-700 bg-gray-100 border-gray-300';
     }
   };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return 'bg-green-500';
+    if (confidence >= 0.6) return 'bg-yellow-500';
+    return 'bg-orange-500';
+  };
+
+  const getConfidenceLabel = (confidence: number) => {
+    if (confidence >= 0.8) return { label: 'High', color: 'text-green-700' };
+    if (confidence >= 0.6) return { label: 'Medium', color: 'text-yellow-700' };
+    return { label: 'Low - Review Recommended', color: 'text-orange-700' };
+  };
+
+  const isBorderlineCase = report && report.confidence < 0.7;
 
   // Error Display
   if (error) {
@@ -205,28 +220,54 @@ export default function VerificationResults({ jobId }: VerificationResultsProps)
         <h2 className="text-2xl font-bold mb-6 text-center">Verification Complete</h2>
 
         <div className={`p-6 rounded-lg border-2 ${getVerdictColor(report.verdict)}`}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
               <h3 className="text-2xl font-bold">{report.verdict}</h3>
               <p className="mt-1 text-lg">
                 Confidence: {((report.confidence || 0) * 100).toFixed(1)}%
               </p>
             </div>
             <div className="text-5xl">
-              {report.verdict === 'AUTHENTIC' && '✅'}
+              {(report.verdict === 'AUTHENTIC' || report.verdict === 'REAL') && '✅'}
               {report.verdict === 'AI_GENERATED' && '🤖'}
               {report.verdict === 'MANIPULATED' && '⚠️'}
               {report.verdict === 'UNKNOWN' && '❓'}
             </div>
           </div>
+          
+          {/* Confidence Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className={`font-semibold ${getConfidenceLabel(report.confidence).color}`}>
+                {getConfidenceLabel(report.confidence).label}
+              </span>
+              <span className="text-gray-600">{((report.confidence || 0) * 100).toFixed(1)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className={`h-3 rounded-full transition-all ${getConfidenceColor(report.confidence)}`}
+                style={{ width: `${(report.confidence * 100).toFixed(0)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Borderline Case Warning */}
+          {isBorderlineCase && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm">
+              <p className="font-semibold text-yellow-800">⚠️ Low Confidence Detection</p>
+              <p className="text-yellow-700 mt-1">
+                This result has relatively low confidence. Consider manual review or additional verification.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* AI Detection Results */}
+      {/* AI Detection Results - Enhanced */}
       {report.aiDetection && (
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h3 className="text-xl font-bold mb-4">AI Detection Analysis</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <h3 className="text-xl font-bold mb-4">🤖 AI Detection Analysis</h3>
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-gray-50 rounded">
               <div className="text-sm text-gray-600">Verdict</div>
               <div className="text-lg font-semibold">{report.aiDetection.verdict}</div>
@@ -238,6 +279,67 @@ export default function VerificationResults({ jobId }: VerificationResultsProps)
               </div>
             </div>
           </div>
+
+          {/* Model Scores Breakdown */}
+          {report.aiDetection.modelScores && Object.keys(report.aiDetection.modelScores).length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h4 className="text-lg font-semibold mb-4 text-gray-700">Individual Model Scores</h4>
+              <div className="space-y-3">
+                {Object.entries(report.aiDetection.modelScores).map(([modelKey, scores]: [string, any]) => {
+                  if (!Array.isArray(scores)) return null;
+                  const aiScore = scores.find((s: any) => s.label?.toLowerCase().includes('ai') || s.label?.toLowerCase().includes('fake'))?.score || 0;
+                  const modelName = modelKey.replace('_predictions', '').toUpperCase();
+                  
+                  return (
+                    <div key={modelKey} className="bg-gray-50 rounded p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">{modelName}</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {(aiScore * 100).toFixed(1)}% AI
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${aiScore > 0.6 ? 'bg-orange-500' : 'bg-green-500'}`}
+                          style={{ width: `${(aiScore * 100).toFixed(0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quality & Forensics Summary */}
+          {(report.aiDetection.qualityReport || report.aiDetection.forensicAnalysis) && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h4 className="text-lg font-semibold mb-4 text-gray-700">Additional Analysis</h4>
+              <div className="grid md:grid-cols-2 gap-4">
+                {report.aiDetection.qualityReport && (
+                  <div className="p-4 bg-blue-50 rounded border border-blue-200">
+                    <div className="text-sm font-semibold text-blue-800 mb-2">Image Quality</div>
+                    <div className="text-2xl font-bold text-blue-900">
+                      {(report.aiDetection.qualityReport.overall_quality * 100).toFixed(0)}%
+                    </div>
+                    {report.aiDetection.qualityReport.enhancement_applied && (
+                      <div className="text-xs text-blue-700 mt-1">
+                        Enhancement: {report.aiDetection.qualityReport.enhancement_applied}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {report.aiDetection.forensicAnalysis && (
+                  <div className="p-4 bg-purple-50 rounded border border-purple-200">
+                    <div className="text-sm font-semibold text-purple-800 mb-2">Manipulation Likelihood</div>
+                    <div className="text-2xl font-bold text-purple-900">
+                      {(report.aiDetection.forensicAnalysis.manipulation_likelihood * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -334,6 +436,23 @@ export default function VerificationResults({ jobId }: VerificationResultsProps)
 
       {/* Actions */}
       <div className="flex justify-center gap-4">
+        {isBorderlineCase && (
+          <button
+            onClick={() => {
+              alert(
+                `Review Recommended:\n\n` +
+                `Verdict: ${report.verdict}\n` +
+                `Confidence: ${(report.confidence * 100).toFixed(1)}%\n\n` +
+                `Due to low confidence, this result should be manually reviewed by a human expert.\n` +
+                `Consider factors like image context, source credibility, and visual artifacts.`
+              );
+            }}
+            className="bg-yellow-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-yellow-700 transition flex items-center gap-2"
+          >
+            <span>⚠️</span>
+            <span>Flag for Review</span>
+          </button>
+        )}
         <button
           onClick={() => window.location.href = '/'}
           className="bg-blue-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-blue-700 transition"

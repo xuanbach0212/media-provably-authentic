@@ -20,7 +20,14 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={() => router.push('/analytics')}
+              className="bg-purple-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center gap-2"
+            >
+              <span>📊</span>
+              <span>Analytics</span>
+            </button>
             <WalletConnect />
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
@@ -54,6 +61,29 @@ export default function Home() {
             <p className="text-sm text-gray-600">
               Immutable attestations stored on SUI blockchain with TEE verification
             </p>
+          </div>
+        </div>
+
+        {/* Upload Mode Selector */}
+        <div className="flex justify-center gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow p-4 flex-1 max-w-xs text-center border-2 border-blue-500">
+            <div className="text-4xl mb-2">📄</div>
+            <h3 className="font-semibold mb-2">Single Upload</h3>
+            <p className="text-sm text-gray-600 mb-3">Upload and verify one image at a time</p>
+            <button className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold cursor-not-allowed" disabled>
+              Current Mode
+            </button>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 flex-1 max-w-xs text-center border-2 border-gray-300 hover:border-purple-500 transition">
+            <div className="text-4xl mb-2">📁</div>
+            <h3 className="font-semibold mb-2">Batch Upload</h3>
+            <p className="text-sm text-gray-600 mb-3">Upload and verify multiple images at once</p>
+            <button 
+              onClick={() => router.push('/batch')}
+              className="bg-purple-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-purple-700 transition"
+            >
+              Switch to Batch
+            </button>
           </div>
         </div>
 
