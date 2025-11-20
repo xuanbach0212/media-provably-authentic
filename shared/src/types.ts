@@ -164,3 +164,30 @@ export interface JobStatusResponse {
   message?: string;
   report?: VerificationReport;
 }
+
+// Socket.IO event types
+export interface ProgressUpdate {
+  stage: number;
+  stageName: string;
+  substep: string;
+  progress: number;
+  timestamp: string;
+  metadata?: {
+    enclaveId?: string;
+    modelName?: string;
+    uploadProgress?: number;
+  };
+}
+
+export interface ErrorUpdate {
+  stage: number;
+  message: string;
+  retryable: boolean;
+  timestamp: string;
+  details?: any;
+}
+
+export interface SocketAuthData {
+  walletAddress: string;
+  signature: string;
+}
