@@ -1,58 +1,74 @@
 /**
- * Walrus Testnet Integration
- * Decentralized storage for media files and reports
+ * Walrus Storage Service (Official SDK)
+ * Uses @mysten/walrus SDK for testnet integration
  * 
- * Walrus is a decentralized storage network by Mysten Labs
- * For testnet setup: https://github.com/MystenLabs/walrus
+ * Walrus provides decentralized blob storage on Sui
+ * Docs: https://sdk.mystenlabs.com/walrus
  */
 
-import axios from "axios";
-import crypto from "crypto";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { walrus } from "@mysten/walrus";
 
-// Walrus Testnet Configuration
-const WALRUS_TESTNET_PUBLISHER = process.env.WALRUS_PUBLISHER_URL || "https://publisher.walrus-testnet.walrus.space";
-const WALRUS_TESTNET_AGGREGATOR = process.env.WALRUS_AGGREGATOR_URL || "https://aggregator.walrus-testnet.walrus.space";
-const WALRUS_EPOCHS = 5; // Number of epochs to store (for testing)
+const WALRUS_EPOCHS = 5; // Store for 5 epochs (~10 days on testnet)
 
-interface WalrusStoreResponse {
-  newlyCreated?: {
-    blobObject: {
-      id: string;
-      blobId: string;
-      size: number;
-      erasureCodeType: string;
-      certifiedEpoch: number;
-    };
-  };
-  alreadyCertified?: {
-    blobId: string;
-    event: {
-      txDigest: string;
-      eventSeq: string;
-    };
-    endEpoch: number;
-  };
-}
-
-interface WalrusBlob {
+export interface WalrusBlob {
   blobId: string;
   size: number;
-  uploadedAt?: string;
+  uploadedAt: string;
   metadata?: Record<string, any>;
 }
 
 export class WalrusService {
-  private publisherUrl: string;
-  private aggregatorUrl: string;
+  private client: any; // WalrusClient (extended SuiClient)
+  private keypair: Ed25519Keypair | null;
 
   constructor() {
-    this.publisherUrl = WALRUS_TESTNET_PUBLISHER;
-    this.aggregatorUrl = WALRUS_TESTNET_AGGREGATOR;
-    console.log(`[Walrus] Initialized (testnet with fallback)`);
+    // Read env vars in constructor (after dotenv.config())
+    const SUI_NETWORK = (process.env.SUI_NETWORK as "testnet" | "devnet" | "mainnet") || "testnet";
+    const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY || "";
+    // Initialize Sui client with network property (required by Walrus SDK)
+    const suiClient = new SuiClient({ 
+      url: getFullnodeUrl(SUI_NETWORK),
+      // @ts-ignore - Walrus SDK requires network property
+      network: SUI_NETWORK,
+    });
+
+    // Extend with Walrus SDK
+    this.client = suiClient.$extend(
+      walrus({
+        uploadRelay: {
+          host: "https://upload-relay.testnet.walrus.space",
+          // SDK will auto-detect tip config from relay
+        },
+      })
+    );
+
+    // Initialize keypair (same as Sui service)
+    if (!SUI_PRIVATE_KEY) {
+      console.warn("[Walrus] No private key configured");
+      this.keypair = null;
+    } else {
+      try {
+        if (SUI_PRIVATE_KEY.startsWith("suiprivkey")) {
+          const { secretKey } = decodeSuiPrivateKey(SUI_PRIVATE_KEY);
+          this.keypair = Ed25519Keypair.fromSecretKey(secretKey);
+        } else {
+          this.keypair = Ed25519Keypair.fromSecretKey(
+            Buffer.from(SUI_PRIVATE_KEY, "hex")
+          );
+        }
+        console.log(`[Walrus] SDK initialized with upload relay (${SUI_NETWORK})`);
+      } catch (error: any) {
+        console.error("[Walrus] Failed to load keypair:", error.message);
+        this.keypair = null;
+      }
+    }
   }
 
   /**
-   * Store a blob on Walrus testnet
+   * Store a blob on Walrus using the official SDK
    * @param data Buffer of data to store
    * @param metadata Optional metadata
    * @returns Blob information including blobId
@@ -61,76 +77,108 @@ export class WalrusService {
     data: Buffer,
     metadata?: Record<string, any>
   ): Promise<WalrusBlob> {
-    console.log(`[Walrus] Storing ${data.length} bytes on testnet...`);
-
-    const response = await axios.put(
-      `${this.publisherUrl}/v1/store`,
-      data,
-      {
-        params: {
-          epochs: WALRUS_EPOCHS,
-        },
-        headers: {
-          "Content-Type": "application/octet-stream",
-        },
-        timeout: 60000,
-      }
-    );
-
-    const result: WalrusStoreResponse = response.data;
-
-    let blobId: string;
-    let size: number;
-
-    if (result.newlyCreated) {
-      blobId = result.newlyCreated.blobObject.blobId;
-      size = result.newlyCreated.blobObject.size;
-      console.log(`[Walrus] ✓ Stored: ${blobId.substring(0, 20)}...`);
-    } else if (result.alreadyCertified) {
-      blobId = result.alreadyCertified.blobId;
-      size = data.length;
-      console.log(`[Walrus] ✓ Already exists: ${blobId.substring(0, 20)}...`);
-    } else {
-      throw new Error("Unknown Walrus response");
+    if (!this.keypair) {
+      throw new Error("Walrus requires keypair to store blobs. Set SUI_PRIVATE_KEY in .env");
     }
 
-    return {
-      blobId,
-      size,
-      uploadedAt: new Date().toISOString(),
-      metadata,
-    };
+    console.log(`[Walrus] Storing ${data.length} bytes via SDK...`);
+
+    try {
+      const result = await this.client.walrus.writeBlob({
+        blob: new Uint8Array(data),
+        epochs: WALRUS_EPOCHS,
+        deletable: false, // Make blobs permanent
+        signer: this.keypair,
+      });
+
+      console.log(`[Walrus] ✓ Stored: ${result.blobId.substring(0, 20)}...`);
+
+      return {
+        blobId: result.blobId,
+        size: data.length,
+        uploadedAt: new Date().toISOString(),
+        metadata,
+      };
+    } catch (error: any) {
+      console.error("[Walrus] SDK store error:", error.message);
+      
+      // Check if it's a retryable error
+      if (error.name === "RetryableWalrusClientError") {
+        console.log("[Walrus] Resetting client and retrying...");
+        this.client.walrus.reset();
+        
+        // Retry once
+        const result = await this.client.walrus.writeBlob({
+          blob: new Uint8Array(data),
+          epochs: WALRUS_EPOCHS,
+          deletable: false,
+          signer: this.keypair,
+        });
+
+        return {
+          blobId: result.blobId,
+          size: data.length,
+          uploadedAt: new Date().toISOString(),
+          metadata,
+        };
+      }
+
+      throw new Error(`Failed to store blob on Walrus: ${error.message}`);
+    }
   }
 
   /**
-   * Retrieve a blob from Walrus testnet
+   * Retrieve a blob from Walrus using the official SDK
    * @param blobId The blob ID to retrieve
    * @returns Buffer of blob data
    */
   async retrieveBlob(blobId: string): Promise<Buffer> {
-    console.log(`[Walrus] Retrieving from testnet: ${blobId.substring(0, 20)}...`);
+    console.log(`[Walrus] Retrieving blob: ${blobId.substring(0, 20)}...`);
 
-    const response = await axios.get(
-      `${this.aggregatorUrl}/v1/${blobId}`,
-      {
-        responseType: "arraybuffer",
-        timeout: 60000,
+    try {
+      const data = await this.client.walrus.readBlob({ blobId });
+      
+      console.log(`[Walrus] ✓ Retrieved ${data.length} bytes`);
+      return Buffer.from(data);
+    } catch (error: any) {
+      console.error("[Walrus] SDK retrieve error:", error.message);
+
+      // Check if it's a retryable error
+      if (error.name === "RetryableWalrusClientError") {
+        console.log("[Walrus] Resetting client and retrying...");
+        this.client.walrus.reset();
+        
+        // Retry once
+        const data = await this.client.walrus.readBlob({ blobId });
+        return Buffer.from(data);
       }
-    );
 
-    console.log(`[Walrus] ✓ Retrieved ${response.data.length} bytes`);
-    return Buffer.from(response.data);
+      throw new Error(`Failed to retrieve blob from Walrus: ${error.message}`);
+    }
   }
 
   /**
-   * Check if Walrus testnet is accessible
+   * Check if Walrus SDK is properly configured
    */
   async healthCheck(): Promise<boolean> {
     try {
-      await axios.get(`${this.publisherUrl}/v1/health`, { timeout: 5000 });
-      return true;
-    } catch {
+      // Try to read a known blob or just check if client is initialized
+      return this.keypair !== null;
+    } catch (error) {
+      console.error("[Walrus] Health check failed:", error);
       return false;
     }
+  }
+
+  /**
+   * Get storage cost estimate
+   * @param size Size in bytes
+   * @param epochs Number of epochs to store
+   */
+  getStorageCostEstimate(size: number, epochs: number = WALRUS_EPOCHS): string {
+    // Rough estimate: ~0.001 WAL per KB per epoch
+    const sizeInKB = size / 1024;
+    const estimatedWAL = sizeInKB * epochs * 0.001;
+    return `~${estimatedWAL.toFixed(4)} WAL + gas fees`;
   }
 }
