@@ -73,7 +73,7 @@ class ReverseSearchEngine:
         unique_matches.sort(key=lambda x: x.get("firstSeen", "9999"))
         
         # 5. Enrich top matches with crawled metadata
-        if unique_matches and not config.MOCK_MODE:
+        if unique_matches:
             unique_matches = await self._enrich_with_metadata(unique_matches[:5])
         
         # 6. Build provenance chain

@@ -2,13 +2,13 @@
 Google Reverse Image Search integration using SerpAPI
 """
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict
 from PIL import Image
 import base64
 from io import BytesIO
-import requests
 from datetime import datetime, timedelta
 import random
+import requests
 
 import config
 
@@ -37,31 +37,30 @@ class GoogleReverseSearch:
         Returns:
             List of match dictionaries
         """
-        if not self.enabled or config.MOCK_MODE:
-            logger.info("Using mock Google search results")
-            return self._mock_search(image)
+        if not self.enabled:
+            logger.warning("Google search disabled - no API key configured")
+            return []
         
         try:
             return await self._real_search(image)
         except Exception as e:
             logger.error(f"Google search failed: {e}")
-            # Fallback to mock
-            return self._mock_search(image)
+            raise  # Don't fallback to mock, let caller handle the error
     
     async def _real_search(self, image: Image.Image) -> List[Dict]:
         """Real Google search using SerpAPI"""
         try:
             from serpapi import GoogleSearch
             
-            # Convert image to base64
-            buffered = BytesIO()
-            image.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
+            # Upload image to temporary hosting to get public URL
+            logger.info("Uploading image to temporary hosting...")
+            image_url = await self._upload_image_temp(image)
+            logger.info(f"Image uploaded: {image_url}")
             
-            # Prepare search parameters
+            # Prepare search parameters with public URL
             params = {
                 "engine": "google_lens",
-                "url": f"data:image/jpeg;base64,{img_str}",
+                "url": image_url,
                 "api_key": self.api_key,
             }
             
@@ -75,12 +74,84 @@ class GoogleReverseSearch:
             logger.info(f"Found {len(matches)} matches from Google")
             return matches
             
-        except ImportError:
+        except ImportError as e:
             logger.error("serpapi package not installed. Install with: pip install google-search-results")
-            return self._mock_search(image)
+            raise ImportError("google-search-results package required for Google Reverse Search") from e
         except Exception as e:
             logger.error(f"SerpAPI search error: {e}")
-            return []
+            raise
+    
+    async def _upload_image_temp(self, image: Image.Image) -> str:
+        """
+        Upload image to temporary hosting and return public URL
+        Tries multiple services for reliability
+        """
+        try:
+            # Convert image to bytes
+            buffered = BytesIO()
+            image.save(buffered, format="JPEG", quality=85)
+            img_bytes = buffered.getvalue()
+            
+            # Method 1: Try 0x0.st (simple, no auth needed)
+            try:
+                files = {"file": ("image.jpg", img_bytes, "image/jpeg")}
+                response = requests.post("https://0x0.st", files=files, timeout=15)
+                
+                if response.status_code == 200:
+                    url = response.text.strip()
+                    if url.startswith("http"):
+                        logger.info(f"Image uploaded to 0x0.st: {url}")
+                        return url
+            except Exception as e:
+                logger.warning(f"0x0.st upload error: {e}")
+            
+            # Method 2: Try catbox.moe (reliable, no auth)
+            try:
+                data = {"reqtype": "fileupload"}
+                files = {"fileToUpload": ("image.jpg", img_bytes, "image/jpeg")}
+                response = requests.post(
+                    "https://catbox.moe/user/api.php",
+                    data=data,
+                    files=files,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    url = response.text.strip()
+                    if url.startswith("http"):
+                        logger.info(f"Image uploaded to catbox.moe: {url}")
+                        return url
+            except Exception as e:
+                logger.warning(f"catbox.moe upload error: {e}")
+            
+            # Method 3: Try ImgBB with base64
+            try:
+                img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                payload = {
+                    "key": "6d207e02198a847aa98d0a2a901485a5",
+                    "image": img_base64,
+                }
+                response = requests.post(
+                    "https://api.imgbb.com/1/upload",
+                    data=payload,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success"):
+                        url = result["data"]["url"]
+                        logger.info(f"Image uploaded to ImgBB: {url}")
+                        return url
+            except Exception as e:
+                logger.warning(f"ImgBB upload error: {e}")
+            
+            # If all fail, raise error
+            raise Exception("All image hosting services failed. Please try again or use alternative method.")
+            
+        except Exception as e:
+            logger.error(f"Image upload failed: {e}")
+            raise
     
     def _parse_serpapi_results(self, results: dict) -> List[Dict]:
         """Parse SerpAPI response into our format"""
@@ -131,48 +202,4 @@ class GoogleReverseSearch:
         
         return matches
     
-    def _mock_search(self, image: Image.Image) -> List[Dict]:
-        """Mock search for development/fallback"""
-        import hashlib
-        
-        # Generate deterministic results based on image
-        img_bytes = BytesIO()
-        image.save(img_bytes, format='JPEG')
-        img_hash = hashlib.md5(img_bytes.getvalue()).hexdigest()
-        
-        random.seed(img_hash)
-        num_matches = random.randint(1, 4)
-        
-        matches = []
-        base_date = datetime.now() - timedelta(days=random.randint(60, 400))
-        
-        for i in range(num_matches):
-            first_seen = (base_date - timedelta(days=i * 45)).isoformat()
-            similarity = random.uniform(0.75, 0.95)
-            
-            sources = [
-                "Getty Images",
-                "Reuters",
-                "Associated Press",
-                "National Geographic",
-                "BBC News",
-                "The Guardian",
-                "New York Times"
-            ]
-            
-            match = {
-                "url": f"https://example.com/images/{img_hash[:8]}/match{i+1}",
-                "firstSeen": first_seen,
-                "similarity": round(similarity, 2),
-                "metadata": {
-                    "title": f"Original Image Source {i+1}",
-                    "publisher": random.choice(sources),
-                    "timestamp": first_seen,
-                    "source": "Google Lens (Mock)",
-                    "context": "Mock result for development"
-                }
-            }
-            matches.append(match)
-        
-        return matches
 

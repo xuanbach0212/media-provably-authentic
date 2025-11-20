@@ -1,13 +1,23 @@
 import os
+from dotenv import load_dotenv
 
-# API Keys
+# Load environment variables from .env file
+load_dotenv()
+
+# API Keys (REQUIRED - no mock mode)
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
 TINEYE_PUBLIC_KEY = os.getenv("TINEYE_PUBLIC_KEY", "")
 TINEYE_PRIVATE_KEY = os.getenv("TINEYE_PRIVATE_KEY", "")
 
+# Validation
+if not SERPAPI_KEY:
+    import logging
+    logging.warning("⚠️  SERPAPI_KEY not configured - Google Reverse Search will be DISABLED")
+
 # Search engines to use
-SEARCH_ENGINES = ["google", "phash"]  # Start with google and local phash
+SEARCH_ENGINES = ["google", "phash"]  # Google and local phash
 ENABLE_TINEYE = bool(TINEYE_PUBLIC_KEY)  # Only enable if keys provided
+ENABLE_GOOGLE = bool(SERPAPI_KEY)  # Only enable if API key provided
 
 # Search settings
 MAX_RESULTS_PER_ENGINE = 10
@@ -21,9 +31,6 @@ PHASH_DB_PATH = os.getenv("PHASH_DB_PATH", "./phash_db.json")
 # Rate limiting
 GOOGLE_RATE_LIMIT = 100  # requests per day (SerpAPI free tier)
 TINEYE_RATE_LIMIT = 5000  # requests per month
-
-# Mock mode fallback
-MOCK_MODE = not SERPAPI_KEY  # Use mock if no API key
 
 # Timeout settings
 REQUEST_TIMEOUT = 30  # seconds

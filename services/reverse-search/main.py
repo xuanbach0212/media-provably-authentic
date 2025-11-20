@@ -76,7 +76,7 @@ async def health():
         "status": "ok",
         "service": "reverse-search",
         "version": "2.0.0",
-        "google_enabled": not config.MOCK_MODE,
+        "google_enabled": config.ENABLE_GOOGLE,
         "phash_db_size": len(get_search_engine().phash_db.db)
     }
 
@@ -89,7 +89,6 @@ async def search_status():
         "status": "ok",
         "google_search": {
             "enabled": engine.google_search.enabled,
-            "mode": "mock" if config.MOCK_MODE else "real",
             "api_key_configured": bool(config.SERPAPI_KEY)
         },
         "phash_database": {
