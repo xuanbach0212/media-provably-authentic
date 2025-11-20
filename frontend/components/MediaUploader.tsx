@@ -221,7 +221,7 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
       {file && !uploading && account && (
         <button
           onClick={handleUpload}
-          className="mt-6 w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
+          className="mt-6 w-full btn-sui text-white py-3 px-6 rounded-lg font-semibold shadow-lg"
         >
           Sign & Verify Authenticity
         </button>

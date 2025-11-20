@@ -10,6 +10,22 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Sui Brand Colors */
+  --color-sui-blue: #4DA2FF;
+  --color-sui-blue-light: #6FBCFF;
+  --color-sui-blue-dark: #2563EB;
+  --color-sui-cyan: #06B6D4;
+  --color-sui-cyan-light: #22D3EE;
+  --color-sui-turquoise: #14B8A6;
+  
+  /* Dark theme colors */
+  --color-dark-bg: #0F1419;
+  --color-dark-surface: #1A1F2E;
+  --color-dark-surface-light: #1F2937;
+  --color-dark-border: #2A3441;
+  --color-dark-text: #E5E7EB;
+  --color-dark-muted: #9CA3AF;
 }
 
 /* Dark mode by default */
@@ -29,18 +45,21 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Glow animation for active nodes */
+/* Sui Glow animation for active nodes */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(77, 162, 255, 0.6),
+                0 0 40px rgba(111, 188, 255, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 40px rgba(77, 162, 255, 0.8),
+                0 0 60px rgba(111, 188, 255, 0.5);
   }
 }
 
 .node-active {
   animation: pulse-glow 2s ease-in-out infinite;
+  background: linear-gradient(135deg, #4DA2FF 0%, #6FBCFF 100%);
 }
 
 /* Smooth transitions */
@@ -79,18 +98,45 @@ body {
   animation: node-enter 0.4s ease-out;
 }
 
-/* Success glow */
+/* Sui Success glow */
 @keyframes success-glow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 15px rgba(20, 184, 166, 0.5);
   }
   50% {
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.8);
   }
 }
 
 .node-success {
   animation: success-glow 1.5s ease-in-out 3;
+}
+
+/* Sui Gradient Button */
+.btn-sui {
+  background: linear-gradient(135deg, #4DA2FF 0%, #6FBCFF 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-sui:hover {
+  background: linear-gradient(135deg, #2563EB 0%, #4DA2FF 100%);
+  box-shadow: 0 0 20px rgba(77, 162, 255, 0.5);
+}
+
+/* Glassmorphism effect */
+.glass-sui {
+  background: rgba(26, 31, 46, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(77, 162, 255, 0.2);
+}
+
+/* Sui Gradient Backgrounds */
+.bg-sui-gradient {
+  background-image: linear-gradient(135deg, #4DA2FF 0%, #6FBCFF 100%);
+}
+
+.bg-sui-glow {
+  background-image: radial-gradient(circle at center, rgba(77, 162, 255, 0.15) 0%, transparent 70%);
 }
 
 /* Error glow */
