@@ -1,17 +1,30 @@
 # Media Provably Authentic
 
-End-to-end media verification system using decentralized storage, secure compute enclaves, and blockchain attestations.
+End-to-end media analysis system using decentralized storage, secure compute enclaves, and blockchain attestations.
+
+## Philosophy: Analysis, Not Judgment
+
+This system **provides raw technical metrics and analysis data** rather than making binary judgments about authenticity. We believe users should interpret the data within their specific context.
+
+**Key Principles:**
+- 📊 **Transparent Metrics**: All model scores, forensic data, and analysis results are exposed
+- 🧮 **No Black Boxes**: Every metric is explained and interpretable
+- 👤 **User Interpretation**: You decide what the data means for your use case
+- ⛓️ **Blockchain Verified**: All analysis is cryptographically signed and stored on-chain
+
+See [ANALYSIS_GUIDE.md](./ANALYSIS_GUIDE.md) for detailed metric explanations.
 
 ## Architecture Overview
 
-This system provides **provable authenticity** for media files through:
+This system provides **cryptographically verified media analysis** through:
 
 - **Decentralized Storage**: Walrus for encrypted media and reports
 - **Secure Computation**: Nautilus TEE for verified processing
 - **Key Management**: Seal KMS for encryption key handling
 - **Blockchain Attestations**: Sui smart contracts for immutable proofs
-- **AI Detection**: HuggingFace models for deepfake/AI-generated detection
-- **Provenance Tracking**: Reverse image search and metadata analysis
+- **AI Detection**: 7+ HuggingFace models with ensemble scoring
+- **Forensic Analysis**: Compression artifacts, frequency domain, EXIF metadata
+- **Provenance Tracking**: Conditional reverse image search
 
 ## Project Structure
 
@@ -54,28 +67,35 @@ cd ../reverse-search && pip install -r requirements.txt
 
 ### Running Development Servers
 
-Start all services at once:
+**Quick Start:**
 ```bash
-npm run dev
+./start-all-services.sh
 ```
 
-Or start services individually:
+This starts:
+- Frontend (Next.js) - http://localhost:3000
+- Backend API - http://localhost:3001
+- AI Detection Service - http://localhost:8000
+- Reverse Search Service - http://localhost:8001
 
+**Stop All Services:**
 ```bash
-# Frontend (Next.js) - http://localhost:3000
-npm run dev:frontend
+./stop-all-services.sh
+```
 
-# Backend API - http://localhost:3001
-npm run dev:backend
+**Individual Services:**
+```bash
+# Frontend
+cd frontend && npm run dev
 
-# Mock Services - http://localhost:3002
-npm run dev:mock-services
+# Backend
+cd backend && npm run dev
 
-# AI Detection Service - http://localhost:8001
-npm run dev:ai
+# AI Detection
+cd services/ai-detection && ./start.sh
 
-# Reverse Search Service - http://localhost:8002
-npm run dev:reverse-search
+# Reverse Search
+cd services/reverse-search && source venv/bin/activate && python main.py
 ```
 
 ## Current Phase: MVP with Mock Services
@@ -95,6 +115,28 @@ See `docs/` for detailed flows. Phase 7 covers:
 - Nautilus SGX/TEE deployment
 - Sui smart contract deployment
 
+## Analysis Workflow
+
+### 1. AI Detection (Always Runs)
+- 7+ specialized models analyze the image
+- Ensemble scoring combines results
+- Forensic analysis checks compression, EXIF, frequency patterns
+- Returns **raw metrics** (no verdict)
+
+### 2. Conditional Reverse Search
+Runs only when:
+- **Ensemble score < 0.5** (likely real → verify online presence)
+- **Ensemble score > 0.8** (likely AI → check for stolen real images)
+
+This saves resources and focuses search on actionable cases.
+
+### 3. Blockchain Attestation
+All analysis data is:
+- Cryptographically signed by TEE enclave
+- Stored on Sui blockchain
+- Linked to Walrus-stored full report
+- Timestamped and immutable
+
 ## API Endpoints
 
 ### Backend API (port 3001)
@@ -105,15 +147,52 @@ See `docs/` for detailed flows. Phase 7 covers:
 - `GET /api/attestation/:attestationId` - Get results
 - `GET /api/report/:reportCID` - Fetch full report
 
-### AI Detection (port 8001)
+**Response Format (Updated):**
+```json
+{
+  "jobId": "...",
+  "analysisData": {
+    "aiDetection": {
+      "ensembleScore": 0.73,
+      "modelScores": { "individual_models": {...} },
+      "forensicAnalysis": {...},
+      "frequencyAnalysis": {...},
+      "qualityMetrics": {...}
+    },
+    "reverseSearch": { "matches": [...] } | null
+  },
+  "blockchainAttestation": {...}
+}
+```
 
-- `POST /detect` - Analyze media for AI generation
+### AI Detection (port 8000)
+
+- `POST /detect` - File upload detection
+- `POST /detect/base64` - Base64 encoded detection
+- `GET /health` - Service health check
+- `GET /models/status` - Check loaded models
+
+**Response Format:**
+```json
+{
+  "modelScores": {...},
+  "ensembleScore": 0.73,
+  "forensicAnalysis": {...},
+  "frequencyAnalysis": {...},
+  "qualityMetrics": {...},
+  "metadata": {...}
+}
+```
+
+### Reverse Search (port 8001)
+
+- `POST /search` - Reverse image search
 - `GET /health` - Service health check
 
-### Reverse Search (port 8002)
-
-- `POST /search` - Perform reverse image/video search
-- `GET /health` - Service health check
+**Configuration:**
+- Requires `SERPAPI_KEY` environment variable
+- Uses Google Lens API for searches
+- Falls back gracefully if disabled
 
 ### Mock Services (port 3002)
 

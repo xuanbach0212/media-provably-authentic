@@ -203,7 +203,7 @@ class AIDetectionModels:
                 verdict = "UNCERTAIN"
                 confidence = 0.5
 
-        # Build comprehensive model scores
+        # Build comprehensive model scores (RAW METRICS ONLY)
         model_scores = {
             "ai_generated_score": scores["ai_generated"],
             "deepfake_score": scores["deepfake"],
@@ -213,22 +213,24 @@ class AIDetectionModels:
             "ensemble_model_count": len(all_predictions),
         }
 
-        # Track individual model verdicts for transparency
-        individual_verdicts = {}
+        # Track individual model scores for transparency (no verdicts)
+        individual_model_scores = {}
         for pred in all_predictions:
-            individual_verdicts[pred["model"]] = {
+            individual_model_scores[pred["model"]] = {
                 "ai_score": float(pred["ai_score"]),
                 "deepfake_score": float(pred["deepfake_score"]),
                 "confidence": float(pred["confidence"]),
-                "verdict": "AI_GENERATED" if pred["ai_score"] > 0.5 else "REAL",
                 "weight": pred["weight"],
             }
 
-        model_scores["individual_model_verdicts"] = individual_verdicts
+        model_scores["individual_models"] = individual_model_scores
 
         # Add ensemble metadata
         if "ensemble_metadata" in ensemble_result:
             model_scores["ensemble_metadata"] = ensemble_result["ensemble_metadata"]
+
+        # Calculate ensemble score (0-1 scale, where higher = more likely AI)
+        ensemble_score = float(scores["ai_generated"])
 
         # Convert numpy types to Python natives for JSON serialization
         forensics_clean = self._convert_numpy_types(forensics)
@@ -236,13 +238,18 @@ class AIDetectionModels:
         frequency_clean = self._convert_numpy_types(frequency_analysis)
         quality_clean = self._convert_numpy_types(quality_report)
 
+        # Return RAW METRICS ONLY - no verdict or confidence
         return {
-            "verdict": verdict,
-            "confidence": float(confidence),
             "modelScores": model_scores_clean,
+            "ensembleScore": ensemble_score,
             "forensicAnalysis": forensics_clean,
             "frequencyAnalysis": frequency_clean,
-            "qualityAssessment": quality_clean,
+            "qualityMetrics": quality_clean,
+            "metadata": {
+                "models_used": len(all_predictions),
+                "forensics_enabled": config.ENABLE_FORENSICS,
+                "device": self.device,
+            },
         }
 
     def _run_model(self, image: Image.Image, model_info: Dict) -> list:

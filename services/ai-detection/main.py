@@ -52,10 +52,12 @@ class DetectionRequest(BaseModel):
 
 
 class DetectionResponse(BaseModel):
-    verdict: str  # REAL, AI_GENERATED, MANIPULATED
-    confidence: float
-    modelScores: dict
-    forensicAnalysis: dict
+    modelScores: dict  # All individual model scores
+    ensembleScore: float  # Raw ensemble score (0-1)
+    forensicAnalysis: dict  # All forensic metrics
+    frequencyAnalysis: dict  # DCT/FFT analysis
+    qualityMetrics: dict  # Image quality scores
+    metadata: dict  # EXIF, file info
 
 
 @app.on_event("startup")
@@ -105,13 +107,13 @@ async def warm_up_models():
 @app.post("/detect", response_model=DetectionResponse)
 async def detect(image: UploadFile = File(...)):
     """
-    Detect if media is AI-generated or manipulated (File Upload)
+    Analyze media and return raw detection metrics (File Upload)
     
     Process:
     1. Read uploaded image file
     2. Run HuggingFace models (if available)
     3. Perform forensic analysis
-    4. Return comprehensive verdict
+    4. Return comprehensive raw metrics (no verdict)
     """
     try:
         # Read image file
@@ -159,13 +161,13 @@ async def detect(image: UploadFile = File(...)):
 @app.post("/detect/base64", response_model=DetectionResponse)
 async def detect_base64(request: DetectionRequest):
     """
-    Detect if media is AI-generated or manipulated (Base64 Input)
+    Analyze media and return raw detection metrics (Base64 Input)
     
     Process:
     1. Decode base64 image
     2. Run HuggingFace models (if available)
     3. Perform forensic analysis
-    4. Return comprehensive verdict
+    4. Return comprehensive raw metrics (no verdict)
     """
     try:
         # Decode base64 image

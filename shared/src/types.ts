@@ -2,8 +2,6 @@
 
 export type JobStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
-export type Verdict = "AUTHENTIC" | "MANIPULATED" | "AI_GENERATED" | "UNKNOWN";
-
 export interface MediaMetadata {
   filename: string;
   mimeType: string;
@@ -57,15 +55,45 @@ export interface ProvenanceResult {
   confidence: number;
 }
 
+export interface ForensicMetrics {
+  exifData: any;
+  compressionArtifacts: number;
+  noisePattern: any;
+  colorDistribution: any;
+  compressionArtifactsDetected?: boolean;
+  metadata_consistency?: boolean;
+  [key: string]: any;
+}
+
+export interface FrequencyMetrics {
+  dctAnalysis: any;
+  fftAnalysis: any;
+}
+
+export interface QualityMetrics {
+  sharpness: number;
+  brightness: number;
+  contrast: number;
+}
+
 export interface AIDetectionResult {
-  verdict: "REAL" | "AI_GENERATED" | "MANIPULATED";
-  confidence: number;
   modelScores: {
     [modelName: string]: number;
   };
+  ensembleScore: number;
+  forensicAnalysis: ForensicMetrics;
+  frequencyAnalysis: FrequencyMetrics;
+  qualityMetrics: QualityMetrics;
+  metadata?: any;
+}
+
+export interface AnalysisData {
+  aiDetection: AIDetectionResult;
+  reverseSearch: ProvenanceResult | null;
   forensicAnalysis: {
-    compressionArtifacts?: boolean;
-    metadata_consistency?: boolean;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: string;
     [key: string]: any;
   };
 }
@@ -81,29 +109,12 @@ export interface VerificationReport {
   jobId: string;
   mediaCID: string;
   mediaHash: string;
-  verdict: Verdict;
-  confidence: number;
-  provenance: ProvenanceResult;
-  reverseSearch?: ProvenanceResult; // Alias for provenance
-  aiDetection: AIDetectionResult;
-  forensicAnalysis: Record<string, any>;
+  analysisData: AnalysisData;
   enclaveAttestation: EnclaveAttestation;
   generatedAt: string;
   reportStorageCID?: string; // Walrus CID for the report itself
   blockchainAttestation?: BlockchainAttestation; // On-chain attestation
   encryptionMetadata?: EncryptionMetadata; // Encryption info
-  consensusMetadata?: {
-    agreementRate: number;
-    participatingEnclaves: number;
-    consensusTimestamp: string;
-    enclaveReports: Array<{
-      enclaveId: string;
-      verdict: Verdict;
-      confidence: number;
-      reputation: number;
-      stake: number;
-    }>;
-  };
 }
 
 export interface BlockchainAttestation {
@@ -111,7 +122,6 @@ export interface BlockchainAttestation {
   jobId?: string;
   mediaHash?: string;
   reportCID?: string;
-  verdict?: Verdict;
   enclaveSignature?: string;
   timestamp: string;
   blockNumber?: number;
