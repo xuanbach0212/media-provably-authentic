@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
@@ -103,9 +103,63 @@ async def warm_up_models():
 
 
 @app.post("/detect", response_model=DetectionResponse)
-async def detect(request: DetectionRequest):
+async def detect(image: UploadFile = File(...)):
     """
-    Detect if media is AI-generated or manipulated
+    Detect if media is AI-generated or manipulated (File Upload)
+    
+    Process:
+    1. Read uploaded image file
+    2. Run HuggingFace models (if available)
+    3. Perform forensic analysis
+    4. Return comprehensive verdict
+    """
+    try:
+        # Read image file
+        image_bytes = await image.read()
+        pil_image = Image.open(BytesIO(image_bytes))
+        
+        # Convert to RGB if needed
+        if pil_image.mode != 'RGB':
+            pil_image = pil_image.convert('RGB')
+        
+        # Validate and resize image
+        MIN_SIZE = 224  # Minimum size for most models
+        
+        # Resize if too small (pad to minimum size)
+        if pil_image.width < MIN_SIZE or pil_image.height < MIN_SIZE:
+            logger.warning(f"Image too small ({pil_image.size}), padding to {MIN_SIZE}x{MIN_SIZE}")
+            new_image = Image.new('RGB', (MIN_SIZE, MIN_SIZE), (255, 255, 255))
+            # Center the image
+            offset = ((MIN_SIZE - pil_image.width) // 2, (MIN_SIZE - pil_image.height) // 2)
+            new_image.paste(pil_image, offset)
+            pil_image = new_image
+        
+        # Resize if too large
+        if pil_image.width > config.MAX_IMAGE_SIZE[0] or pil_image.height > config.MAX_IMAGE_SIZE[1]:
+            logger.info(f"Resizing image from {pil_image.size} to {config.MAX_IMAGE_SIZE}")
+            pil_image.thumbnail(config.MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
+        
+        logger.info(f"Processing image: {pil_image.size}, mode: {pil_image.mode}")
+        
+        # Get models
+        detector = get_models()
+        
+        # Run detection (pass image_bytes for EXIF analysis)
+        result = detector.detect(pil_image, image_bytes)
+        
+        logger.info(f"Detection complete: {result['verdict']} (confidence: {result['confidence']:.2f})")
+        
+        return DetectionResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Detection error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/detect/base64", response_model=DetectionResponse)
+async def detect_base64(request: DetectionRequest):
+    """
+    Detect if media is AI-generated or manipulated (Base64 Input)
     
     Process:
     1. Decode base64 image

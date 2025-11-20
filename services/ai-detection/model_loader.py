@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Optional
 
 from transformers import pipeline
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -13,61 +14,59 @@ logger = logging.getLogger(__name__)
 class ModelRegistry:
     """Registry of verified AI detection models from HuggingFace"""
 
-    # Verified models from research (all tested and working)
-    VERIFIED_MODELS = {
-        "primary": "umm-maybe/AI-image-detector",
-        "deepfake": "dima806/deepfake_vs_real_image_detection",
-        "sdxl": "Organika/sdxl-detector",
-        "clip": "openai/clip-vit-base-patch32",
-        "vit": "google/vit-base-patch16-224",
-        "resnet": "microsoft/resnet-50",
-    }
+    # Load models from config.py (NEW: Top performers from Hugging Face research)
+    VERIFIED_MODELS = config.MODELS
 
-    # Model configurations
+    # Model configurations (NEW: Balanced weights for ensemble)
     MODEL_CONFIGS = {
-        "umm-maybe/AI-image-detector": {
+        "Dafilab/ai-image-detector": {
             "type": "image-classification",
-            "purpose": "General AI-generated image detection",
-            "labels_mapping": {
-                # Will be discovered at runtime
-            },
-            "threshold": 0.7,
-            "weight": 0.9,  # Primary model gets 90% weight
-        },
-        "dima806/deepfake_vs_real_image_detection": {
-            "type": "image-classification",
-            "purpose": "Deepfake and manipulation detection",
+            "purpose": "EfficientNet-B4, 98.59% accuracy",
             "labels_mapping": {},
-            "threshold": 0.7,
-            "weight": 0.05,  # Secondary models get minimal weight
+            "threshold": 0.5,
+            "weight": 0.25,  # Balanced weight
+        },
+        "Smogy/SMOGY-Ai-images-detector": {
+            "type": "image-classification",
+            "purpose": "Fine-tuned SDXL, 98.18% accuracy",
+            "labels_mapping": {},
+            "threshold": 0.5,
+            "weight": 0.20,
+        },
+        "Hemg/AI-VS-REAL-IMAGE-DETECTION": {
+            "type": "image-classification",
+            "purpose": "Fine-tuned ViT, 95.84% accuracy",
+            "labels_mapping": {},
+            "threshold": 0.5,
+            "weight": 0.18,
         },
         "Organika/sdxl-detector": {
             "type": "image-classification",
             "purpose": "Stable Diffusion XL detection",
             "labels_mapping": {},
-            "threshold": 0.7,
-            "weight": 0.03,
+            "threshold": 0.5,
+            "weight": 0.15,
+        },
+        "dima806/deepfake_vs_real_image_detection": {
+            "type": "image-classification",
+            "purpose": "Deepfake and manipulation detection",
+            "labels_mapping": {},
+            "threshold": 0.5,
+            "weight": 0.12,
+        },
+        "mmdbes/Fake-image-detection": {
+            "type": "image-classification",
+            "purpose": "ResNet50, CIFAKE trained, 93.34%",
+            "labels_mapping": {},
+            "threshold": 0.5,
+            "weight": 0.07,
         },
         "openai/clip-vit-base-patch32": {
             "type": "zero-shot-image-classification",
-            "purpose": "Multi-modal fallback",
+            "purpose": "CLIP baseline",
             "labels_mapping": {},
-            "threshold": 0.6,
-            "weight": 0.02,
-        },
-        "google/vit-base-patch16-224": {
-            "type": "image-classification",
-            "purpose": "Vision Transformer general classification",
-            "labels_mapping": {},
-            "threshold": 0.55,
-            "weight": 0.25,
-        },
-        "microsoft/resnet-50": {
-            "type": "image-classification",
-            "purpose": "ResNet CNN baseline",
-            "labels_mapping": {},
-            "threshold": 0.55,
-            "weight": 0.25,
+            "threshold": 0.5,
+            "weight": 0.03,
         },
     }
 

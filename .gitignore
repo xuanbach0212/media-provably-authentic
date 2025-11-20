@@ -72,3 +72,21 @@ dump.rdb
 # Test images
 test-images/
 
+
+# Test data and results
+test_images/
+test_results/
+*.pid
+advanced_detection_results.json
+
+# Python test scripts (keep only production code)
+test_advanced_detection.py
+test_suite_*.py
+download_dataset.py
+
+# Temporary documentation
+AI_DETECTION_RESEARCH.md
+AI_DETECTION_TEST_*.md
+AI_DETECTION_UPGRADE_*.md
+TEST_SUITE_README.md
+RUN_AI_DETECTION_TEST.sh

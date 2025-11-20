@@ -4,7 +4,12 @@ from typing import Dict, Optional
 import config
 import numpy as np
 import torch
+from ensemble import SmartEnsemble
 from forensics import ForensicAnalyzer
+
+# Import new advanced modules
+from frequency_analysis import FrequencyAnalyzer
+from image_quality import ImageQualityAssessor
 from model_loader import ModelRegistry
 from PIL import Image
 from transformers import pipeline
@@ -22,6 +27,13 @@ class AIDetectionModels:
         self.loaded_models = {}  # Dictionary of loaded models
         self.forensic_analyzer = ForensicAnalyzer()
         self.device_id = device_id
+
+        # Initialize new advanced analyzers
+        self.frequency_analyzer = FrequencyAnalyzer()
+        self.quality_assessor = ImageQualityAssessor()
+        self.smart_ensemble = SmartEnsemble()
+
+        logger.info("Advanced AI detection modules initialized")
 
     def load_models(self):
         """Load verified models from registry"""
@@ -73,6 +85,12 @@ class AIDetectionModels:
         """
         Detect if image is AI-generated or manipulated
 
+        NEW: Advanced detection with:
+        - Image quality assessment and adaptive enhancement
+        - Frequency domain analysis (DCT/FFT)
+        - Smart ensemble with confidence gating
+        - Cross-model consistency checking
+
         Args:
             image: PIL Image
             image_bytes: Optional raw image bytes for forensic analysis
@@ -82,81 +100,149 @@ class AIDetectionModels:
         """
         self.load_models()
 
-        # Run forensic analysis
+        # ============================================================
+        # PHASE 1: IMAGE QUALITY ASSESSMENT AND ENHANCEMENT
+        # ============================================================
+        logger.info("Phase 1: Quality assessment and enhancement...")
+        enhanced_image, quality_report = self.quality_assessor.assess_and_enhance(image)
+        logger.info(
+            f"Quality: {quality_report['overall_quality']:.2f}, "
+            f"Enhancement: {quality_report.get('enhancement_applied', 'none')}"
+        )
+
+        # ============================================================
+        # PHASE 2: FORENSIC ANALYSIS (on original image)
+        # ============================================================
         forensics = {}
         if config.ENABLE_FORENSICS:
-            logger.info("Running forensic analysis...")
+            logger.info("Phase 2: Forensic analysis...")
             forensics = self.forensic_analyzer.analyze(image, image_bytes)
+            logger.info(
+                f"Manipulation likelihood: {forensics.get('manipulation_likelihood', 0):.3f}"
+            )
 
-        # Run model-based detection (ensemble approach)
+        # ============================================================
+        # PHASE 3: FREQUENCY DOMAIN ANALYSIS (on enhanced image)
+        # ============================================================
+        logger.info("Phase 3: Frequency domain analysis...")
+        frequency_analysis = self.frequency_analyzer.analyze(enhanced_image)
+        logger.info(
+            f"Frequency AI score: {frequency_analysis.get('frequency_ai_score', 0):.3f}"
+        )
+
+        # ============================================================
+        # PHASE 4: MODEL-BASED DETECTION (on enhanced image)
+        # ============================================================
+        logger.info("Phase 4: Running detection models...")
         model_scores = {}
         all_predictions = []
 
-        # Run all loaded models
+        # Run all loaded models on enhanced image
         for model_key, model_info in self.loaded_models.items():
             try:
                 logger.info(f"Running {model_key} model: {model_info['name']}")
-                predictions = self._run_model(image, model_info)
+                predictions = self._run_model(enhanced_image, model_info)
 
                 if predictions:
+                    # Extract AI score and confidence for this model
+                    ai_score = self._extract_ai_score_from_predictions(predictions)
+                    confidence = self._calculate_model_confidence(predictions)
+                    deepfake_score = self._extract_deepfake_score(
+                        predictions, model_key
+                    )
+
                     all_predictions.append(
                         {
                             "model": model_key,
                             "predictions": predictions,
                             "weight": model_info["config"].get("weight", 0.25),
+                            "ai_score": ai_score,
+                            "deepfake_score": deepfake_score,
+                            "confidence": confidence,
                         }
                     )
                     model_scores[f"{model_key}_predictions"] = predictions
+
             except Exception as e:
                 logger.error(f"Error running {model_key}: {e}")
 
-        # Combine predictions using ensemble
-        ai_generated_score, deepfake_score = self._ensemble_predict(all_predictions)
+        # ============================================================
+        # PHASE 5: SMART ENSEMBLE COMBINATION
+        # ============================================================
+        logger.info("Phase 5: Smart ensemble combination...")
 
-        model_scores["ai_generated_score"] = ai_generated_score
-        model_scores["deepfake_score"] = deepfake_score
-        model_scores["ensemble_model_count"] = len(all_predictions)
+        # Use smart ensemble instead of simple weighted average
+        ensemble_result = self.smart_ensemble.combine_predictions(
+            model_predictions=all_predictions,
+            image_quality=quality_report,
+            forensics=forensics,
+        )
+
+        verdict = ensemble_result["verdict"]
+        confidence = ensemble_result["confidence"]
+        scores = ensemble_result["scores"]
+
+        # ============================================================
+        # PHASE 6: INCORPORATE FREQUENCY ANALYSIS
+        # ============================================================
+        # Frequency analysis provides additional signal
+        frequency_ai_score = frequency_analysis.get("frequency_ai_score", 0.5)
+
+        # Blend frequency score into AI score (20% weight)
+        adjusted_ai_score = 0.8 * scores["ai_generated"] + 0.2 * frequency_ai_score
+        scores["ai_generated"] = float(adjusted_ai_score)
+
+        # Re-evaluate verdict if frequency analysis is strongly conclusive
+        if frequency_ai_score > 0.8 and scores["ai_generated"] < 0.6:
+            logger.info("Frequency analysis suggests AI - adjusting verdict")
+            verdict = "AI_GENERATED"
+            confidence = max(confidence, frequency_ai_score * 0.8)
+        elif frequency_ai_score < 0.2 and scores["ai_generated"] > 0.4:
+            logger.info("Frequency analysis suggests REAL - adjusting verdict")
+            if verdict == "AI_GENERATED":
+                verdict = "UNCERTAIN"
+                confidence = 0.5
+
+        # Build comprehensive model scores
+        model_scores = {
+            "ai_generated_score": scores["ai_generated"],
+            "deepfake_score": scores["deepfake"],
+            "manipulation_score": scores["manipulation"],
+            "authenticity_score": scores["authenticity"],
+            "frequency_ai_score": frequency_ai_score,
+            "ensemble_model_count": len(all_predictions),
+        }
 
         # Track individual model verdicts for transparency
         individual_verdicts = {}
         for pred in all_predictions:
-            model_key = pred["model"]
-            predictions = pred["predictions"]
-
-            # Get AI score from predictions
-            ai_score = self._extract_ai_score_from_predictions(predictions)
-            individual_verdicts[model_key] = {
-                "ai_score": float(ai_score),
-                "verdict": "AI_GENERATED" if ai_score > 0.5 else "REAL",
+            individual_verdicts[pred["model"]] = {
+                "ai_score": float(pred["ai_score"]),
+                "deepfake_score": float(pred["deepfake_score"]),
+                "confidence": float(pred["confidence"]),
+                "verdict": "AI_GENERATED" if pred["ai_score"] > 0.5 else "REAL",
                 "weight": pred["weight"],
             }
 
         model_scores["individual_model_verdicts"] = individual_verdicts
 
-        # Manipulation detection (from forensics)
-        manipulation_score = forensics.get("manipulation_likelihood", 0.0)
-        model_scores["manipulation_score"] = manipulation_score
-
-        # Calculate authenticity score
-        authenticity_score = 1.0 - max(
-            ai_generated_score, deepfake_score, manipulation_score
-        )
-        model_scores["authenticity_score"] = authenticity_score
-
-        # Determine verdict and confidence
-        verdict, confidence = self._determine_verdict(
-            ai_generated_score, deepfake_score, manipulation_score
-        )
+        # Add ensemble metadata
+        if "ensemble_metadata" in ensemble_result:
+            model_scores["ensemble_metadata"] = ensemble_result["ensemble_metadata"]
 
         # Convert numpy types to Python natives for JSON serialization
         forensics_clean = self._convert_numpy_types(forensics)
         model_scores_clean = self._convert_numpy_types(model_scores)
+        frequency_clean = self._convert_numpy_types(frequency_analysis)
+        quality_clean = self._convert_numpy_types(quality_report)
 
         return {
             "verdict": verdict,
             "confidence": float(confidence),
             "modelScores": model_scores_clean,
             "forensicAnalysis": forensics_clean,
+            "frequencyAnalysis": frequency_clean,
+            "qualityAssessment": quality_clean,
         }
 
     def _run_model(self, image: Image.Image, model_info: Dict) -> list:
@@ -222,6 +308,37 @@ class AIDetectionModels:
     def _extract_ai_score_from_predictions(self, predictions: list) -> float:
         """Extract AI score from predictions for individual verdict tracking"""
         return self._extract_ai_score(predictions, "generic")
+
+    def _calculate_model_confidence(self, predictions: list) -> float:
+        """
+        Calculate model confidence from prediction probabilities
+
+        Confidence is based on:
+        - Max probability (higher is more confident)
+        - Separation between top 2 predictions (larger gap = more confident)
+        """
+        if not predictions:
+            return 0.5
+
+        # Sort by score
+        sorted_preds = sorted(predictions, key=lambda x: x["score"], reverse=True)
+
+        top_score = sorted_preds[0]["score"]
+
+        # If there's a second prediction, calculate separation
+        if len(sorted_preds) > 1:
+            second_score = sorted_preds[1]["score"]
+            separation = top_score - second_score
+
+            # Confidence is combination of top score and separation
+            # High confidence: top_score = 0.9, separation = 0.8 → confidence = 0.85
+            # Low confidence: top_score = 0.6, separation = 0.1 → confidence = 0.35
+            confidence = 0.5 * top_score + 0.5 * (separation + top_score) / 2
+        else:
+            # Only one prediction, use score directly
+            confidence = top_score
+
+        return float(np.clip(confidence, 0, 1))
 
     def _extract_ai_score(self, predictions: list, model_key: str) -> float:
         """Extract AI-generated score from predictions"""
