@@ -15,11 +15,16 @@ router.get("/job/:jobId", async (req, res) => {
     }
 
     const report = await jobQueue.getReport(jobId);
+    
+    // Get Bull job to fetch progress
+    const bullJob = await (await import("../queue/bullQueue")).verificationQueue.getJob(jobId);
+    const progress = bullJob ? await bullJob.progress() : 0;
 
     res.json({
       success: true,
       jobId: job.jobId,
       status: job.status,
+      progress: job.status === 'COMPLETED' ? 100 : progress,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       report: report || undefined,
