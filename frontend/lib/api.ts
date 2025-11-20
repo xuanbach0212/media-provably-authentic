@@ -12,6 +12,8 @@ export interface JobStatusResponse {
   success: boolean;
   jobId: string;
   status: string;
+  progress?: number;
+  message?: string;
   createdAt: string;
   updatedAt: string;
   report?: any;
