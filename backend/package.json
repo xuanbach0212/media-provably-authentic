@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@media-auth/shared": "file:../shared",
+    "@mysten/seal": "^0.9.4",
     "@mysten/sui": "^1.45.0",
     "@mysten/walrus": "^0.8.4",
     "@types/bull": "^3.15.9",
