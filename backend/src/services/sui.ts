@@ -3,12 +3,11 @@
  * For immutable attestation storage
  */
 
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { BlockchainAttestation, Verdict } from "@media-auth/shared";
-import * as crypto from "crypto";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Transaction } from "@mysten/sui/transactions";
 
 export class SuiService {
   private client: SuiClient;
@@ -18,7 +17,9 @@ export class SuiService {
 
   constructor() {
     // Read env vars in constructor (after dotenv.config())
-    this.network = (process.env.SUI_NETWORK as "testnet" | "devnet" | "mainnet") || "testnet";
+    this.network =
+      (process.env.SUI_NETWORK as "testnet" | "devnet" | "mainnet") ||
+      "testnet";
     const privateKey = process.env.SUI_PRIVATE_KEY || "";
     this.packageId = process.env.SUI_PACKAGE_ID || null;
 
@@ -26,7 +27,9 @@ export class SuiService {
 
     // Initialize keypair
     if (!privateKey) {
-      console.error("[Sui] ❌ No private key configured! Set SUI_PRIVATE_KEY in .env");
+      console.error(
+        "[Sui] ❌ No private key configured! Set SUI_PRIVATE_KEY in .env"
+      );
       this.keypair = null;
     } else {
       try {
@@ -42,7 +45,11 @@ export class SuiService {
         }
         const address = this.keypair.toSuiAddress();
         console.log(`[Sui] ✅ Connected to ${this.network}`);
-        console.log(`[Sui] Address: ${address.substring(0, 10)}...${address.substring(address.length - 6)}`);
+        console.log(
+          `[Sui] Address: ${address.substring(0, 10)}...${address.substring(
+            address.length - 6
+          )}`
+        );
       } catch (error: any) {
         console.error("[Sui] ❌ Failed to load private key:", error.message);
         this.keypair = null;
@@ -50,7 +57,9 @@ export class SuiService {
     }
 
     if (!this.packageId) {
-      console.warn("[Sui] ⚠️  No package ID configured. Deploy contract first.");
+      console.warn(
+        "[Sui] ⚠️  No package ID configured. Deploy contract first."
+      );
     } else {
       console.log(`[Sui] Package: ${this.packageId.substring(0, 10)}...`);
     }
@@ -64,17 +73,21 @@ export class SuiService {
     enclaveSignature: string
   ): Promise<BlockchainAttestation> {
     if (!this.keypair) {
-      throw new Error("Sui private key not configured. Set SUI_PRIVATE_KEY in .env");
+      throw new Error(
+        "Sui private key not configured. Set SUI_PRIVATE_KEY in .env"
+      );
     }
 
     if (!this.packageId) {
-      throw new Error("Sui contract not deployed. Deploy contract and set SUI_PACKAGE_ID in .env");
+      throw new Error(
+        "Sui contract not deployed. Deploy contract and set SUI_PACKAGE_ID in .env"
+      );
     }
 
     console.log(`[Sui] Submitting attestation for job ${jobId}...`);
 
     const tx = new Transaction();
-    
+
     // Get shared clock object
     const clock = "0x6";
 
@@ -103,11 +116,14 @@ export class SuiService {
       throw new Error(`Transaction failed: ${result.effects?.status?.error}`);
     }
 
-    const attestationId = result.objectChanges?.find(
+    const createdObject = result.objectChanges?.find(
       (obj: any) => obj.type === "created"
-    )?.objectId || `att_${result.digest}`;
+    ) as any;
+    const attestationId = createdObject?.objectId || `att_${result.digest}`;
 
-    console.log(`[Sui] ✓ Attestation recorded: ${result.digest.substring(0, 20)}...`);
+    console.log(
+      `[Sui] ✓ Attestation recorded: ${result.digest.substring(0, 20)}...`
+    );
 
     return {
       attestationId,
@@ -117,7 +133,9 @@ export class SuiService {
     };
   }
 
-  async getAttestation(attestationId: string): Promise<BlockchainAttestation | null> {
+  async getAttestation(
+    attestationId: string
+  ): Promise<BlockchainAttestation | null> {
     if (!this.packageId) {
       throw new Error("Contract not deployed");
     }
@@ -136,7 +154,7 @@ export class SuiService {
 
       // Parse object content
       const content: any = object.data.content;
-      
+
       return {
         attestationId,
         txHash: content.fields?.tx_hash || "",
@@ -149,7 +167,9 @@ export class SuiService {
     }
   }
 
-  async getAttestationsByJobId(jobId: string): Promise<BlockchainAttestation[]> {
+  async getAttestationsByJobId(
+    jobId: string
+  ): Promise<BlockchainAttestation[]> {
     // Query events emitted by our contract
     try {
       const events = await this.client.queryEvents({
