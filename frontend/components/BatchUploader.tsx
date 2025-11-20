@@ -59,7 +59,8 @@ export default function BatchUploader() {
       const message = `Batch upload ${files.length} files for verification at ${new Date().toISOString()}`;
       const { signature } = await signMessage({ message: new TextEncoder().encode(message) });
       
-      const signatureBase64 = btoa(String.fromCharCode(...signature));
+      const signatureArray = Array.from(signature);
+      const signatureBase64 = btoa(String.fromCharCode.apply(null, signatureArray as any));
       
       // Store auth info
       sessionStorage.setItem('walletAddress', currentAccount.address);
@@ -155,7 +156,7 @@ export default function BatchUploader() {
         }
         
         if (status.status === 'FAILED') {
-          throw new Error(status.error || 'Verification failed');
+          throw new Error(status.message || 'Verification failed');
         }
       } catch (error) {
         console.error('Polling error:', error);

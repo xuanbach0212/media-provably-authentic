@@ -197,7 +197,7 @@ export default function AnalyticsDashboard() {
             <div className="text-4xl font-bold text-orange-600 mb-2">
               {analytics.confidenceDistribution.low}
             </div>
-            <div className="text-sm font-medium text-gray-700">Low (<60%)</div>
+            <div className="text-sm font-medium text-gray-700">Low (&lt;60%)</div>
             <div className="text-xs text-gray-500 mt-1">
               {getPercentage(analytics.confidenceDistribution.low, analytics.totalProcessed)}% of total
             </div>
