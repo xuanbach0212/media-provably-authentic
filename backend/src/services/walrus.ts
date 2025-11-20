@@ -40,7 +40,9 @@ export class WalrusService {
       walrus({
         uploadRelay: {
           host: "https://upload-relay.testnet.walrus.space",
-          // SDK will auto-detect tip config from relay
+          sendTip: {
+            max: 10_000, // Max 10,000 MIST tip per upload (~0.00001 SUI)
+          },
         },
       })
     );
@@ -123,7 +125,8 @@ export class WalrusService {
         };
       }
 
-      throw new Error(`Failed to store blob on Walrus: ${error.message}`);
+      // No fallback - must use real Walrus testnet
+      throw new Error(`Failed to store blob on Walrus testnet: ${error.message}`);
     }
   }
 
@@ -141,19 +144,20 @@ export class WalrusService {
       console.log(`[Walrus] ✓ Retrieved ${data.length} bytes`);
       return Buffer.from(data);
     } catch (error: any) {
-      console.error("[Walrus] SDK retrieve error:", error.message);
+      console.error(`[Walrus] SDK retrieve error: ${error.message}`);
 
       // Check if it's a retryable error
       if (error.name === "RetryableWalrusClientError") {
         console.log("[Walrus] Resetting client and retrying...");
         this.client.walrus.reset();
         
-        // Retry once
         const data = await this.client.walrus.readBlob({ blobId });
+        console.log(`[Walrus] ✓ Retrieved after retry`);
         return Buffer.from(data);
       }
 
-      throw new Error(`Failed to retrieve blob from Walrus: ${error.message}`);
+      // No fallback - must use real Walrus testnet
+      throw new Error(`Failed to retrieve blob from Walrus testnet: ${error.message}`);
     }
   }
 

@@ -152,6 +152,17 @@ class MultiWorkerProcessor {
         `agreement=${(consensus.agreementRate * 100).toFixed(1)}%`
       );
 
+      // Finalize: Store to Walrus and submit to blockchain (single upload, no race condition)
+      const { reportCID, blockchainAttestation } = await this.aggregator.finalizeConsensusReport(
+        verificationJob.jobId,
+        verificationJob.mediaHash,
+        finalReport
+      );
+
+      // Add storage and blockchain info to final report
+      finalReport.reportStorageCID = reportCID;
+      finalReport.blockchainAttestation = blockchainAttestation;
+
       // Store final report
       await reportStore.storeReport(verificationJob.jobId, finalReport);
 

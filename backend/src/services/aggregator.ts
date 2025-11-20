@@ -3,8 +3,10 @@
  * Collects reports from multiple enclaves and computes consensus verdict
  */
 
-import { VerificationReport, Verdict } from "@media-auth/shared";
+import { VerificationReport, Verdict, BlockchainAttestation } from "@media-auth/shared";
 import crypto from "crypto";
+import { StorageService } from "./storage";
+import { BlockchainService } from "./blockchain";
 
 interface EnclaveReport {
   enclaveId: string;
@@ -26,11 +28,15 @@ export class AggregatorService {
   private pendingReports: Map<string, EnclaveReport[]>;
   private minEnclaves: number;
   private consensusThreshold: number;
+  private storage: StorageService;
+  private blockchain: BlockchainService;
 
   constructor() {
     this.pendingReports = new Map();
     this.minEnclaves = parseInt(process.env.MIN_ENCLAVES || "2"); // Minimum 2 enclaves
     this.consensusThreshold = parseFloat(process.env.CONSENSUS_THRESHOLD || "0.66"); // 66% agreement
+    this.storage = new StorageService();
+    this.blockchain = new BlockchainService();
   }
 
   /**
@@ -139,6 +145,42 @@ export class AggregatorService {
     this.pendingReports.delete(jobId);
 
     return consensus;
+  }
+
+  /**
+   * Store consensus report to Walrus and submit attestation to blockchain
+   * This is called AFTER consensus is computed to avoid race conditions
+   */
+  async finalizeConsensusReport(
+    jobId: string,
+    mediaHash: string,
+    consensusReport: VerificationReport
+  ): Promise<{ reportCID: string; blockchainAttestation: BlockchainAttestation }> {
+    console.log(`[Aggregator] Finalizing consensus report for job ${jobId}...`);
+
+    // 1. Store report in Walrus (single upload, no race condition)
+    const reportJSON = JSON.stringify(consensusReport);
+    const reportCID = await this.storage.storeBlob(Buffer.from(reportJSON), {
+      type: "verification-report",
+      jobId,
+    });
+    console.log(`[Aggregator] ✓ Consensus report stored in Walrus: ${reportCID}`);
+
+    // 2. Submit attestation to blockchain
+    // Use the first enclave's signature for now (in production, might aggregate signatures)
+    const enclaveSignature = consensusReport.enclaveAttestation?.signature || "";
+    const blockchainAttestation = await this.blockchain.submitAttestation(
+      jobId,
+      mediaHash,
+      reportCID,
+      consensusReport.verdict,
+      enclaveSignature
+    );
+    console.log(
+      `[Aggregator] ✓ Attestation submitted to Sui: ${blockchainAttestation.txHash}`
+    );
+
+    return { reportCID, blockchainAttestation };
   }
 
   /**

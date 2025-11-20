@@ -12,9 +12,9 @@ import { StorageService } from "./storage";
 import { NautilusService } from "./nautilus";
 
 const AI_DETECTION_URL =
-  process.env.AI_DETECTION_URL || "http://localhost:8001";
+  process.env.AI_DETECTION_URL || "http://localhost:8000";
 const REVERSE_SEARCH_URL =
-  process.env.REVERSE_SEARCH_URL || "http://localhost:8002";
+  process.env.REVERSE_SEARCH_URL || "http://localhost:8001";
 const ENCLAVE_ID = process.env.ENCLAVE_ID || "mock_enclave_1";
 
 export class OrchestrationService {
@@ -101,29 +101,10 @@ export class OrchestrationService {
       mrenclave: this.nautilus.getEnclaveInfo().mrenclave,
     };
 
-    // 7. Store report in Walrus
-    const reportJSON = JSON.stringify(report);
-    const reportCID = await this.storage.storeBlob(Buffer.from(reportJSON), {
-      type: "verification-report",
-      jobId: job.jobId,
-    });
-    report.reportStorageCID = reportCID;
-    console.log(`[Orchestrator] ✓ Report stored in Walrus: ${reportCID}`);
+    // NOTE: Walrus storage and blockchain submission now handled by Aggregator
+    // to avoid race conditions when multiple enclaves process in parallel
 
-    // 8. Submit attestation to blockchain
-    const blockchainAttestation = await this.blockchain.submitAttestation(
-      job.jobId,
-      job.mediaHash,
-      reportCID,
-      verdict,
-      report.enclaveAttestation.signature
-    );
-    report.blockchainAttestation = blockchainAttestation;
-    console.log(
-      `[Orchestrator] ✓ Attestation submitted to Sui: ${blockchainAttestation.txHash}`
-    );
-
-    // 9. Add encryption metadata to report
+    // Add encryption metadata to report
     report.encryptionMetadata = job.encryptionMeta;
 
     console.log(
