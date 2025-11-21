@@ -149,7 +149,7 @@ async def detect(image: UploadFile = File(...)):
         # Run detection (pass image_bytes for EXIF analysis)
         result = detector.detect(pil_image, image_bytes)
         
-        logger.info(f"Detection complete: {result['verdict']} (confidence: {result['confidence']:.2f})")
+        logger.info(f"Detection complete: ensemble score={result.get('ensembleScore', 0):.3f}, models={result.get('modelScores', {}).get('ensemble_model_count', 0)}")
         
         return DetectionResponse(**result)
         
@@ -203,7 +203,7 @@ async def detect_base64(request: DetectionRequest):
         # Run detection (pass image_bytes for EXIF analysis)
         result = detector.detect(image, image_bytes)
         
-        logger.info(f"Detection complete: {result['verdict']} (confidence: {result['confidence']:.2f})")
+        logger.info(f"Detection complete: ensemble score={result.get('ensembleScore', 0):.3f}, models={result.get('modelScores', {}).get('ensemble_model_count', 0)}")
         
         return DetectionResponse(**result)
         

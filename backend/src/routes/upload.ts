@@ -4,6 +4,7 @@ import multer from "multer";
 import { jobQueue } from "../queue/bullQueue";
 import { EncryptionService } from "../services/encryption";
 import { StorageService } from "../services/storage";
+import { SocketManager } from "../services/socketManager";
 import {
   computePerceptualHash,
   computeSHA256,
@@ -32,16 +33,54 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       `[Upload] Received file: ${req.file.originalname}, size: ${req.file.size}`
     );
 
+    // Generate jobId FIRST so we can emit socket updates
+    const jobId = generateJobId();
+    console.log(`[Upload] Created job ${jobId}`);
+
+    // Stage 1: Initializing (0-10%)
+    SocketManager.emitProgress(jobId, {
+      stage: 1,
+      stageName: "Initializing",
+      substep: "Computing file hashes...",
+      progress: 2,
+      timestamp: new Date().toISOString(),
+    });
+
     // 1. Compute hashes
     const sha256 = computeSHA256(req.file.buffer);
     const pHash = computePerceptualHash(req.file.buffer);
 
+    SocketManager.emitProgress(jobId, {
+      stage: 1,
+      stageName: "Initializing",
+      substep: "Creating encryption policy...",
+      progress: 8,
+      timestamp: new Date().toISOString(),
+    });
+
     // 2. Create encryption policy (allow our mock enclave)
     const policyId = await encryption.createPolicy(["mock_enclave_1", "*"]);
+
+    // Stage 2: Encrypting & Storing (10-20%)
+    SocketManager.emitProgress(jobId, {
+      stage: 2,
+      stageName: "Encrypting & Storing",
+      substep: "Encrypting media with Seal KMS...",
+      progress: 12,
+      timestamp: new Date().toISOString(),
+    });
 
     // 3. Encrypt the media
     const { encrypted, metadata: encryptionMeta } =
       await encryption.encryptData(req.file.buffer, policyId);
+
+    SocketManager.emitProgress(jobId, {
+      stage: 2,
+      stageName: "Encrypting & Storing",
+      substep: "Storing encrypted media on Walrus...",
+      progress: 16,
+      timestamp: new Date().toISOString(),
+    });
 
     // 4. Store encrypted media in Walrus
     const mediaCID = await storage.storeBlob(encrypted, {
@@ -51,8 +90,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       pHash,
     });
 
+    SocketManager.emitProgress(jobId, {
+      stage: 2,
+      stageName: "Encrypting & Storing",
+      substep: "Upload complete! Preparing verification...",
+      progress: 20,
+      timestamp: new Date().toISOString(),
+    });
+
     // 5. Create verification job
-    const jobId = generateJobId();
     const metadata: MediaMetadata = {
       filename: req.file.originalname,
       mimeType: req.file.mimetype,
@@ -78,14 +124,21 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // 6. Add to queue
     await jobQueue.addJob(job);
 
-    console.log(`[Upload] Created job ${jobId} for media ${mediaCID}`);
+    console.log(`[Upload] Job ${jobId} added to queue for media ${mediaCID}`);
 
+    // Return jobId immediately so frontend can subscribe to socket
     res.json({
       success: true,
       jobId,
       mediaCID,
       status: "PENDING",
       mediaHash: sha256,
+      progress: {
+        stage: 2,
+        stageName: "Encrypting & Storing",
+        substep: "Upload complete! Preparing verification...",
+        progress: 20,
+      },
     });
   } catch (error: any) {
     console.error("[Upload] Error:", error.message);

@@ -6,6 +6,12 @@ export interface UploadResponse {
   mediaCID: string;
   status: string;
   mediaHash: string;
+  progress?: {
+    stage: number;
+    stageName: string;
+    substep: string;
+    progress: number;
+  };
 }
 
 export interface JobStatusResponse {

@@ -26,17 +26,25 @@ export default function Home() {
   const [socketClient] = useState(() => new SocketClient());
   const [finalReport, setFinalReport] = useState<any>(null);
 
+  // Connect socket on component mount (early connection)
+  useEffect(() => {
+    const walletAddress = sessionStorage.getItem('walletAddress') || 'anonymous';
+    const signature = sessionStorage.getItem('signature') || '';
+    
+    console.log('[Page] Connecting socket early...');
+    socketClient.connect(walletAddress, signature);
+
+    return () => {
+      console.log('[Page] Disconnecting socket on unmount');
+      socketClient.disconnect();
+    };
+  }, [socketClient]);
+
+  // Subscribe to job updates when jobId is available
   useEffect(() => {
     if (!currentJobId) return;
 
-    console.log('[Page] Setting up socket for job:', currentJobId);
-
-    // Get wallet info
-    const walletAddress = sessionStorage.getItem('walletAddress') || 'anonymous';
-    const signature = sessionStorage.getItem('signature') || '';
-
-    // Connect socket
-    socketClient.connect(walletAddress, signature);
+    console.log('[Page] Subscribing to job:', currentJobId);
 
     // Subscribe to job updates
     socketClient.subscribeToJob(currentJobId, {
@@ -63,27 +71,39 @@ export default function Home() {
       },
     });
 
-    // Cleanup - but DON'T disconnect immediately after complete
+    // Cleanup - unsubscribe from job
     return () => {
-      console.log('[Page] Cleanup for job:', currentJobId);
+      console.log('[Page] Unsubscribing from job:', currentJobId);
       socketClient.unsubscribeFromJob(currentJobId);
-      // Don't disconnect socket here - keep it alive
     };
   }, [currentJobId, socketClient]);
 
-  const handleUploadComplete = (jobId: string, walletAddress: string, signature: string) => {
+  const handleUploadStart = () => {
+    // Show Stage 1 immediately when upload starts
+    setStatus('PROCESSING');
+    setCurrentStage(1);
+    setProgress(0);
+    setSubstep('Starting upload...');
+    setError(null);
+    setFinalReport(null);
+  };
+
+  const handleUploadComplete = (jobId: string, walletAddress: string, signature: string, initialProgress?: any) => {
     // Store wallet info
     sessionStorage.setItem('walletAddress', walletAddress);
     sessionStorage.setItem('signature', signature);
     
-    // Reset all state for new upload
+    // Set initial progress from upload response if available
+    const stage = initialProgress?.stage || 2;
+    const progress = initialProgress?.progress || 20;
+    const substep = initialProgress?.substep || 'Upload complete! Preparing verification...';
+    
+    // Set jobId and update progress
     setCurrentJobId(jobId);
     setStatus('PROCESSING');
-    setCurrentStage(1);
-    setProgress(5);
-    setSubstep('Starting verification...');
-    setError(null);
-    setFinalReport(null);
+    setCurrentStage(stage);
+    setProgress(progress);
+    setSubstep(substep);
   };
 
   const handleNewUpload = () => {
@@ -252,7 +272,10 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-center mb-8 text-dark-text">
               Upload Media to Verify
             </h2>
-            <MediaUploader onUploadComplete={handleUploadComplete} />
+            <MediaUploader 
+              onUploadComplete={handleUploadComplete}
+              onUploadStart={handleUploadStart}
+            />
           </div>
         ) : (status === 'COMPLETED' && finalReport) ? (
           <div>

@@ -5,10 +5,11 @@ import { ApiClient } from '@/lib/api';
 import { useCurrentAccount, useSignPersonalMessage } from '@mysten/dapp-kit';
 
 interface MediaUploaderProps {
-  onUploadComplete: (jobId: string, walletAddress: string, signature: string) => void;
+  onUploadComplete: (jobId: string, walletAddress: string, signature: string, initialProgress?: any) => void;
+  onUploadStart?: () => void; // Notify parent when upload starts
 }
 
-export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) {
+export default function MediaUploader({ onUploadComplete, onUploadStart }: MediaUploaderProps) {
   const account = useCurrentAccount();
   const { mutate: signMessage } = useSignPersonalMessage();
   
@@ -80,6 +81,11 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
 
     setUploading(true);
     setError(null);
+    
+    // Notify parent that upload is starting
+    if (onUploadStart) {
+      onUploadStart();
+    }
 
     try {
       // Sign message with wallet
@@ -101,7 +107,7 @@ export default function MediaUploader({ onUploadComplete }: MediaUploaderProps) 
               );
               
               console.log('[MediaUploader] Upload successful:', response);
-              onUploadComplete(response.jobId, account.address, result.signature);
+              onUploadComplete(response.jobId, account.address, result.signature, response.progress);
             } catch (err: any) {
               setError(err.message || 'Upload failed');
               console.error('[MediaUploader] Upload error:', err);
