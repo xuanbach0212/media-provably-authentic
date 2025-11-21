@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaUploader from '@/components/MediaUploader';
-import { WalletConnect } from '@/components/WalletConnect';
 import VerificationResults from '@/components/VerificationResults';
+import { WalletConnect } from '@/components/WalletConnect';
+import ThemeSwitcher from '@/components/ThemeSwitcher';
 import { FaCheckCircle, FaSpinner, FaTimesCircle } from 'react-icons/fa';
 import { SocketClient, ProgressUpdate, ErrorUpdate } from '@/lib/socket';
 import { 
@@ -151,37 +152,46 @@ export default function Home() {
         initial="hidden"
         animate="visible"
       >
+        {/* Top Bar */}
+        <motion.div 
+          className="flex justify-end items-center gap-3 mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <ThemeSwitcher />
+          <WalletConnect />
+        </motion.div>
+
         {/* Header */}
         <motion.div 
           className="text-center mb-8 sm:mb-12"
           variants={itemVariants}
         >
-          <motion.div 
-            className="flex justify-end items-center mb-6"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <WalletConnect />
-          </motion.div>
           <motion.h1 
-            className="text-4xl sm:text-5xl font-bold text-dark-text mb-4"
+            className="text-3xl sm:text-5xl font-bold mb-4"
+            style={{ color: 'var(--theme-text)' }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 100, damping: 20 }}
           >
-            <span className="bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] bg-clip-text text-transparent">
-              Media Provably Authentic
+            <span style={{
+              backgroundImage: `linear-gradient(to right, var(--theme-primary), var(--theme-secondary))`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
+              Verify Media Authenticity
             </span>
           </motion.h1>
           <motion.p 
-            className="text-lg sm:text-xl text-dark-muted max-w-2xl mx-auto px-4"
+            className="text-base sm:text-lg max-w-2xl mx-auto px-4"
+            style={{ color: 'var(--theme-text-muted)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Verify the authenticity of media using AI detection, provenance tracking,
-            and blockchain attestations powered by <span className="text-[#4DA2FF] font-semibold">SUI</span> ecosystem
+            AI detection, provenance tracking, and blockchain attestations powered by <span style={{ color: 'var(--theme-primary)', fontWeight: 600 }}>SUI</span> ecosystem
           </motion.p>
         </motion.div>
 

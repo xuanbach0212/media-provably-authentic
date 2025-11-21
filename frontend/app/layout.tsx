@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppWalletProvider } from "@/providers/WalletProvider";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import ParticlesBackground from "@/components/ParticlesBackground";
 
 const geistSans = Geist({
@@ -27,14 +28,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased animated-gradient-bg`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{ background: 'var(--theme-background)' }}
       >
         <ParticlesBackground />
-        <AppWalletProvider>
-          <div className="relative z-10">
-            {children}
-          </div>
-        </AppWalletProvider>
+        <ThemeProvider>
+          <AppWalletProvider>
+            <div className="relative z-10">
+              {children}
+            </div>
+          </AppWalletProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
