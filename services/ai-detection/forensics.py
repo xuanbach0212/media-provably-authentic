@@ -37,28 +37,51 @@ class ForensicAnalyzer:
             
             # EXIF analysis
             if image_bytes:
-                results.update(self._analyze_exif(image_bytes))
+                exif_data = self._analyze_exif(image_bytes)
+                results.update(exif_data)
+            else:
+                results["exif_data"] = {}
+                results["exif_data_present"] = False
             
             # Convert to numpy for analysis
             img_array = np.array(image)
             
             # Noise analysis
-            results.update(self._analyze_noise(img_array))
+            noise_results = self._analyze_noise(img_array)
+            results.update(noise_results)
             
             # Compression artifacts
-            results.update(self._analyze_compression(img_array))
+            compression_results = self._analyze_compression(img_array)
+            results.update(compression_results)
+            # Map to standard fields
+            if "block_variance_std" in compression_results:
+                results["compression_artifacts"] = min(compression_results["block_variance_std"] / 1000.0, 1.0)
             
             # Color consistency
-            results.update(self._analyze_color_consistency(img_array))
+            color_results = self._analyze_color_consistency(img_array)
+            results.update(color_results)
+            # Add standard fields
+            if len(img_array.shape) == 3:
+                results["color_saturation"] = float(np.mean(np.std(img_array, axis=(0,1))) / 255.0)
+                results["brightness"] = float(np.mean(img_array) / 255.0)
+                results["contrast"] = float(np.std(img_array) / 128.0)
+            else:
+                results["color_saturation"] = 0.0
+                results["brightness"] = float(np.mean(img_array) / 255.0)
+                results["contrast"] = float(np.std(img_array) / 128.0)
             
-            # Edge analysis
-            results.update(self._analyze_edges(img_array))
+            # Edge analysis (for sharpness)
+            edge_results = self._analyze_edges(img_array)
+            results.update(edge_results)
+            # Map to standard fields
+            if "edge_density" in edge_results:
+                results["sharpness"] = edge_results["edge_density"]
             
             # Overall manipulation score
             results["manipulation_likelihood"] = self._calculate_manipulation_score(results)
             
         except Exception as e:
-            logger.error(f"Forensic analysis error: {e}")
+            logger.error(f"Forensic analysis error: {e}", exc_info=True)
             results["error"] = str(e)
         
         return results

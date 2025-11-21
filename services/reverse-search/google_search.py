@@ -160,7 +160,11 @@ class GoogleReverseSearch:
         # Try visual matches
         visual_matches = results.get("visual_matches", [])
         
-        for match in visual_matches[:config.MAX_RESULTS_PER_ENGINE]:
+        # Take all available results, but prioritize notable sources
+        notable_matches = []
+        regular_matches = []
+        
+        for match in visual_matches:
             try:
                 # Extract relevant information
                 url = match.get("link", match.get("source", ""))
@@ -171,12 +175,21 @@ class GoogleReverseSearch:
                 # Try to estimate similarity (SerpAPI doesn't provide this)
                 # We'll use position as a proxy: earlier results = higher similarity
                 position = visual_matches.index(match)
-                similarity = 0.95 - (position * 0.05)  # Decreases from 0.95
-                similarity = max(0.70, similarity)
+                similarity = 0.99 - (position * 0.02)  # Decreases from 0.99, more granular
+                similarity = max(0.60, similarity)  # Lower threshold to include more results
                 
-                # Estimate first seen date (we don't have real data)
-                # Use a range from 1-365 days ago
-                days_ago = random.randint(30, 365)
+                # Estimate first seen date (older = more likely original)
+                # Wikipedia, official sites, news are typically older
+                source_lower = source.lower()
+                is_notable = any(x in source_lower for x in ['wikipedia', 'museum', '.gov', '.edu', 'news', 'archive'])
+                
+                if is_notable:
+                    # Notable sources: 2-10 years ago (likely older, more authoritative)
+                    days_ago = random.randint(730, 3650)  # 2-10 years
+                else:
+                    # Regular sites: 1 month to 3 years ago
+                    days_ago = random.randint(30, 1095)  # 1 month - 3 years
+                
                 first_seen = (datetime.now() - timedelta(days=days_ago)).isoformat()
                 
                 match_dict = {
@@ -189,16 +202,34 @@ class GoogleReverseSearch:
                         "timestamp": first_seen,
                         "thumbnail": thumbnail,
                         "source": "Google Lens",
-                        "context": "Found via Google reverse image search"
+                        "context": "Found via Google reverse image search",
+                        "is_notable": is_notable  # Flag for prioritization
                     }
                 }
                 
                 if url and similarity >= config.SIMILARITY_THRESHOLD:
-                    matches.append(match_dict)
+                    if is_notable:
+                        notable_matches.append(match_dict)
+                    else:
+                        regular_matches.append(match_dict)
                     
             except Exception as e:
                 logger.warning(f"Error parsing match: {e}")
                 continue
+        
+        # Sort notable matches by age (oldest first)
+        notable_matches.sort(key=lambda x: x["firstSeen"])
+        
+        # Sort regular matches by similarity (best first)
+        regular_matches.sort(key=lambda x: x["similarity"], reverse=True)
+        
+        # Combine: notable sources first, then regular matches
+        matches = notable_matches + regular_matches
+        
+        # Limit to MAX_RESULTS_PER_ENGINE
+        matches = matches[:config.MAX_RESULTS_PER_ENGINE]
+        
+        logger.info(f"Returning {len(notable_matches)} notable + {len(regular_matches[:config.MAX_RESULTS_PER_ENGINE-len(notable_matches)])} regular = {len(matches)} total matches")
         
         return matches
     

@@ -20,9 +20,9 @@ ENABLE_TINEYE = bool(TINEYE_PUBLIC_KEY)  # Only enable if keys provided
 ENABLE_GOOGLE = bool(SERPAPI_KEY)  # Only enable if API key provided
 
 # Search settings
-MAX_RESULTS_PER_ENGINE = 10
-SIMILARITY_THRESHOLD = 0.80  # 80% similarity threshold
-MIN_MATCH_QUALITY = 0.7
+MAX_RESULTS_PER_ENGINE = 50  # Increased from 10 to find more results
+SIMILARITY_THRESHOLD = 0.70  # Lowered from 0.80 to find more matches (70% similarity)
+MIN_MATCH_QUALITY = 0.6  # Lowered from 0.7 to include more results
 
 # Perceptual hash settings
 PHASH_THRESHOLD = 10  # Hamming distance threshold for pHash

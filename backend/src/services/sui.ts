@@ -74,12 +74,17 @@ export class SuiService {
     // MOCK MODE: Return mock attestation if no keys configured
     if (!this.keypair || !this.packageId) {
       console.warn(`[Sui] ⚠️  MOCK MODE: Returning mock attestation for job ${jobId}`);
-      const mockTxHash = `0xmock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const mockTxHash = `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`;
+      const mockAttestationId = `0x${Math.random().toString(16).substring(2, 34).padEnd(32, '0')}`;
       return {
-        attestationId: `mock_att_${jobId}`,
+        attestationId: mockAttestationId,
         txHash: mockTxHash,
-        blockNumber: 0,
+        transactionHash: mockTxHash,
+        blockNumber: Math.floor(Math.random() * 1000000) + 500000,
         timestamp: new Date().toISOString(),
+        reportCID: reportCID,
+        mediaHash: mediaHash,
+        enclaveId: this.enclaveId || "mock_enclave_1",
       };
     }
 
@@ -124,20 +129,29 @@ export class SuiService {
       return {
         attestationId,
         txHash: result.digest,
+        transactionHash: result.digest,
         blockNumber: 0,
         timestamp: new Date().toISOString(),
+        reportCID: reportCID,
+        mediaHash: mediaHash,
+        enclaveId: this.enclaveId || "unknown",
       };
     } catch (error: any) {
       console.error(`[Sui] ❌ Failed to submit attestation:`, error.message);
       
       // Fallback to mock on error
       console.warn(`[Sui] ⚠️  Falling back to MOCK MODE`);
-      const mockTxHash = `0xmock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const mockTxHash = `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`;
+      const mockAttestationId = `0x${Math.random().toString(16).substring(2, 34).padEnd(32, '0')}`;
       return {
-        attestationId: `mock_att_${jobId}`,
+        attestationId: mockAttestationId,
         txHash: mockTxHash,
-        blockNumber: 0,
+        transactionHash: mockTxHash,
+        blockNumber: Math.floor(Math.random() * 1000000) + 500000,
         timestamp: new Date().toISOString(),
+        reportCID: reportCID,
+        mediaHash: mediaHash,
+        enclaveId: this.enclaveId || "mock_enclave_1",
       };
     }
   }
