@@ -147,8 +147,8 @@ export default function Home() {
       exit="exit"
       variants={pageVariants}
     >
-      {/* Gradient overlay for depth */}
-      <div className="fixed inset-0 bg-gradient-to-b from-gray-900/50 via-gray-900/80 to-gray-900 pointer-events-none z-0"></div>
+      {/* Gradient overlay for depth - below content */}
+      <div className="fixed inset-0 bg-gradient-to-b from-transparent via-gray-900/30 to-gray-900/60 pointer-events-none z-[5]"></div>
       
       <motion.div 
         className="relative z-10 container mx-auto px-4 py-8 sm:py-12 max-w-7xl"

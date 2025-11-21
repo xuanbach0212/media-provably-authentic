@@ -12,11 +12,14 @@ interface TreeConnectionProps {
 }
 
 export default function TreeConnectionLine({ connection, fromNode, toNode, active, completed }: TreeConnectionProps) {
-  // Direct pixel positions for dots
+  // Node center positions - adjusted for node size (16px = 4 tailwind units) and padding (40px)
+  // Nodes are rendered with paddingTop: 40px and node size is w-4 h-4 (16px)
+  const nodeOffsetY = 40 + 8; // paddingTop + half of node height (16/2 = 8)
+  
   const fromX = fromNode.position.x;
-  const fromY = fromNode.position.y;
+  const fromY = fromNode.position.y + nodeOffsetY;
   const toX = toNode.position.x;
-  const toY = toNode.position.y;
+  const toY = toNode.position.y + nodeOffsetY;
 
   // Generate path based on connection type
   const generatePath = () => {
@@ -55,13 +58,13 @@ export default function TreeConnectionLine({ connection, fromNode, toNode, activ
 
   return (
     <g>
-      {/* Base path (static) - thin line */}
+      {/* Base path (static) - Always visible, even when pending */}
       <path
         d={path}
         fill="none"
-        stroke={completed ? '#1F2937' : '#374151'}
+        stroke={completed ? '#22C55E40' : active ? '#6366F140' : '#37415180'}
         strokeWidth="1"
-        opacity="0.2"
+        opacity={completed ? 0.3 : active ? 0.4 : 0.15}
       />
 
       {/* Animated path (active) - thinner */}
@@ -98,29 +101,7 @@ export default function TreeConnectionLine({ connection, fromNode, toNode, activ
         />
       )}
 
-      {/* Flow particles - tiny dots */}
-      {active && !completed && (
-        <g>
-          <motion.circle
-            r="2"
-            fill={color}
-            initial={{ opacity: 0 }}
-            animate={{ 
-              opacity: [0, 0.8, 0],
-              cx: [fromX, toX],
-              cy: [fromY, toY],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-            style={{
-              filter: `drop-shadow(0 0 3px ${color})`,
-            }}
-          />
-        </g>
-      )}
+      {/* Flow particles - DISABLED for cleaner UI */}
     </g>
   );
 }

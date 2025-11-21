@@ -43,17 +43,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{ background: '#0F1419' }}
       >
-        {/* 3D Background - Always visible */}
-        <div className="fixed inset-0 z-0">
+        {/* 3D Background - Fixed position, always visible, pointer-events-none */}
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
           <ParticlesBackground />
           <ShootingStars />
         </div>
         
         <ThemeProvider>
           <AppWalletProvider>
-            <div className="relative z-10">
+            <div className="relative" style={{ zIndex: 10 }}>
               {children}
             </div>
           </AppWalletProvider>

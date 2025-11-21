@@ -1,9 +1,8 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { NodeStatus, TreeNode } from '@/lib/processTreeData';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import { TreeNode, NodeStatus, SERVICE_COLORS } from '@/lib/processTreeData';
-import Card3D from '@/components/Card3D';
 
 interface TreeNode3DProps {
   node: TreeNode;
@@ -142,33 +141,10 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
     );
   };
 
-  // Particle effects for processing state
+  // Particle effects for processing state - DISABLED
   const renderParticles = () => {
-    if (status !== 'processing' && status !== 'active') return null;
-
-    return (
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 rounded-full"
-            style={{ backgroundColor: node.color }}
-            animate={{
-              x: [0, Math.random() * 40 - 20],
-              y: [0, Math.random() * 40 - 20],
-              opacity: [0.7, 0],
-              scale: [1, 0],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              delay: i * 0.2,
-              ease: 'easeOut',
-            }}
-          />
-        ))}
-      </div>
-    );
+    // Particles disabled to keep clean UI
+    return null;
   };
 
   return (
@@ -178,9 +154,9 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
         left: `${node.position.x}px`,
         top: `${node.position.y}px`,
         transform: `translateX(-50%)`,
+        zIndex: isHovered ? 50 : 10,
       }}
     >
-        <div className="relative">
       <motion.div
         className="relative cursor-pointer group"
         onMouseEnter={() => {
@@ -281,27 +257,13 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
           </motion.div>
         </motion.div>
 
-        {/* Status Icon Badge - Tiny */}
-        {status === 'completed' && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full z-10"
-          />
-        )}
-        {status === 'failed' && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full z-10"
-          />
-        )}
+        {/* Status Icon Badge - Removed for cleaner UI */}
 
         {/* Particles - Mini */}
         {(status === 'processing' || status === 'active') && renderParticles()}
       </motion.div>
 
-      {/* Premium Tooltip - Instant on hover */}
+      {/* Premium Tooltip - Always on top */}
       <AnimatePresence>
         {isHovered && (
           <motion.div
@@ -309,7 +271,11 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 5 }}
             transition={{ duration: 0.1 }}
-            className="absolute left-1/2 -translate-x-1/2 top-7 z-[9999] pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+            style={{
+              top: '28px',
+              zIndex: 99999,
+            }}
           >
             <div 
               className="px-3 py-2 rounded-lg text-xs font-semibold shadow-2xl backdrop-blur-md whitespace-nowrap"
@@ -347,7 +313,6 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
     </div>
   );
 }

@@ -119,41 +119,23 @@ export default function ProcessTree3D({
         )}
       </div>
 
-      {/* Tree Container - Centered and larger */}
+      {/* Tree Container - Centered, NO overflow-hidden for tooltips */}
       <div
         ref={containerRef}
-        className="relative w-full h-[200px] overflow-hidden rounded-xl bg-gray-900/30 border border-gray-800/50"
+        className="relative w-full h-[200px] rounded-xl bg-gray-900/30 border border-gray-800/50"
         style={{
           scrollBehavior: 'smooth',
         }}
         onScroll={handleScroll}
       >
-        {/* Stage Labels - Positioned exactly with stages */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '20px', top: '12px' }}>
-            Upload
-          </div>
-          <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '110px', top: '12px' }}>
-            Encrypt
-          </div>
-          <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '240px', top: '12px' }}>
-            Enclave Processing
-          </div>
-          <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '640px', top: '12px' }}>
-            Consensus
-          </div>
-          <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '790px', top: '12px' }}>
-            Blockchain
-          </div>
-        </div>
-
-        {/* SVG Connections Layer */}
+        {/* SVG Connections Layer - Synced with nodes */}
         <svg
           className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
           width="900"
           height="200"
           viewBox="0 0 900 200"
           preserveAspectRatio="xMidYMid meet"
+          style={{ top: '0px', left: '50%' }}
         >
           {TREE_CONNECTIONS.map((conn) => {
             const fromNode = positionedNodes.find((n) => n.id === conn.from);
@@ -182,17 +164,30 @@ export default function ProcessTree3D({
           })}
         </svg>
 
-        {/* Stage Dividers - Subtle */}
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: '32px', width: '900px' }}>
-          <div className="absolute h-[calc(100%-32px)] border-l border-gray-700/30" style={{ left: '100px' }}></div>
-          <div className="absolute h-[calc(100%-32px)] border-l border-gray-700/30" style={{ left: '165px' }}></div>
-          <div className="absolute h-[calc(100%-32px)] border-l border-gray-700/40" style={{ left: '635px' }}></div>
-          <div className="absolute h-[calc(100%-32px)] border-l border-gray-700/30" style={{ left: '785px' }}></div>
-        </div>
+        {/* Combined Layer - Labels and Nodes centered together */}
+        <div className="absolute left-1/2 -translate-x-1/2" style={{ width: '900px', height: 200, top: 0 }}>
+          {/* Stage Labels */}
+          <div className="absolute inset-0 pointer-events-none" style={{ top: '12px', zIndex: 1 }}>
+            <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '20px' }}>
+              Upload
+            </div>
+            <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '110px' }}>
+              Encrypt
+            </div>
+            <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '240px' }}>
+              Enclave Processing
+            </div>
+            <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '640px' }}>
+              Consensus
+            </div>
+            <div className="absolute text-xs text-gray-400 font-mono uppercase tracking-wider" style={{ left: '790px' }}>
+              Blockchain
+            </div>
+          </div>
 
-        {/* Nodes Layer */}
-        <div className="absolute left-1/2 -translate-x-1/2" style={{ width: '900px', height: 200, paddingTop: '40px' }}>
-          {positionedNodes.map((node) => (
+          {/* Nodes */}
+          <div className="absolute inset-0" style={{ paddingTop: '40px', zIndex: 10 }}>
+            {positionedNodes.map((node) => (
               <TreeNode3D
                 key={node.id}
                 node={node}
@@ -200,6 +195,7 @@ export default function ProcessTree3D({
                 onClick={() => setSelectedNode(node)}
               />
             ))}
+          </div>
         </div>
       </div>
 
