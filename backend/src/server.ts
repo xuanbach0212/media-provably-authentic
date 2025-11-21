@@ -14,7 +14,6 @@ import uploadRoutes from "./routes/upload";
 import verifyRoutes from "./routes/verify";
 import disputeRoutes from "./routes/dispute";
 import retryRoutes from "./routes/retry";
-import testRoutes from "./routes/test";
 import { SocketManager } from "./services/socketManager";
 
 const app = express();
@@ -84,7 +83,6 @@ app.use("/api", uploadRoutes);
 app.use("/api", verifyRoutes);
 app.use("/api", retryRoutes);
 app.use("/api/dispute", disputeRoutes);
-app.use("/api/test", testRoutes);
 
 // Error handler
 app.use(
