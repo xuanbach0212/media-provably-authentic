@@ -1,11 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import MediaUploader from '@/components/MediaUploader';
 import { WalletConnect } from '@/components/WalletConnect';
 import VerificationResults from '@/components/VerificationResults';
 import { FaCheckCircle, FaSpinner, FaTimesCircle } from 'react-icons/fa';
 import { SocketClient, ProgressUpdate, ErrorUpdate } from '@/lib/socket';
+import { 
+  pageVariants, 
+  containerVariants, 
+  itemVariants,
+  staggerContainer,
+  cardEntrance 
+} from '@/lib/animations';
+import { successConfetti } from '@/lib/confetti';
 
 const STAGES = [
   { id: 1, name: 'Initializing' },
@@ -68,6 +77,9 @@ export default function Home() {
         setStatus('COMPLETED');
         setProgress(100);
         setCurrentStage(STAGES.length);
+        
+        // Trigger success confetti
+        setTimeout(() => successConfetti(), 300);
       },
     });
 
@@ -126,23 +138,52 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-dark-bg">
-      <div className="container mx-auto px-4 py-8 sm:py-12 max-w-5xl">
+    <motion.main 
+      className="min-h-screen"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+    >
+      <motion.div 
+        className="container mx-auto px-4 py-8 sm:py-12 max-w-5xl"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex justify-end items-center mb-6">
+        <motion.div 
+          className="text-center mb-8 sm:mb-12"
+          variants={itemVariants}
+        >
+          <motion.div 
+            className="flex justify-end items-center mb-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <WalletConnect />
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-dark-text mb-4">
+          </motion.div>
+          <motion.h1 
+            className="text-4xl sm:text-5xl font-bold text-dark-text mb-4"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          >
             <span className="bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] bg-clip-text text-transparent">
               Media Provably Authentic
             </span>
-          </h1>
-          <p className="text-lg sm:text-xl text-dark-muted max-w-2xl mx-auto px-4">
+          </motion.h1>
+          <motion.p 
+            className="text-lg sm:text-xl text-dark-muted max-w-2xl mx-auto px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             Verify the authenticity of media using AI detection, provenance tracking,
             and blockchain attestations powered by <span className="text-[#4DA2FF] font-semibold">SUI</span> ecosystem
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Features */}
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
@@ -170,9 +211,23 @@ export default function Home() {
         </div>
 
         {/* Process Tree - Always visible - Sui Style */}
-        <div className="mb-8 glass-sui rounded-lg p-6 relative overflow-hidden">
+        <motion.div 
+          className="mb-8 glass-premium rounded-lg p-6 relative overflow-hidden hover-lift"
+          variants={cardEntrance}
+          whileHover={{ scale: 1.005 }}
+        >
           {/* Sui Glow Background */}
-          <div className="absolute inset-0 bg-sui-glow opacity-50 pointer-events-none"></div>
+          <motion.div 
+            className="absolute inset-0 bg-sui-glow opacity-50 pointer-events-none"
+            animate={{
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          ></motion.div>
           
           <h3 className="text-lg font-bold text-dark-text mb-4 text-center relative z-10">
             <span className="bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] bg-clip-text text-transparent">
@@ -228,24 +283,31 @@ export default function Home() {
 
           {/* Progress Bar (only show during processing) */}
           {(status === 'PROCESSING' || status === 'FAILED') && (
-            <div className="mt-6 pt-4 border-t border-dark-border relative z-10">
+            <motion.div 
+              className="mt-6 pt-4 border-t border-dark-border relative z-10"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-bold text-dark-text">Current Progress</h4>
                 <span className="text-xl font-bold text-[#4DA2FF]">{progress.toFixed(0)}%</span>
               </div>
               <div className="w-full bg-dark-bg rounded-full h-3 mb-3 overflow-hidden">
-                <div
+                <motion.div
                   className="bg-sui-gradient h-3 rounded-full transition-all duration-500 ease-out shadow-lg"
                   style={{ 
                     width: `${progress}%`,
                     boxShadow: '0 0 10px rgba(77, 162, 255, 0.6)'
                   }}
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${progress}%` }}
                 />
               </div>
               <p className="text-dark-muted text-sm">{substep}</p>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         {/* Error Display */}
         {error && (
@@ -267,34 +329,78 @@ export default function Home() {
         )}
 
         {/* Upload Section - OR Results if job started */}
-        {!currentJobId ? (
-          <div className="bg-dark-surface border border-dark-border rounded-lg p-6 sm:p-8 max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-8 text-dark-text">
-              Upload Media to Verify
-            </h2>
-            <MediaUploader 
-              onUploadComplete={handleUploadComplete}
-              onUploadStart={handleUploadStart}
-            />
-          </div>
-        ) : (status === 'COMPLETED' && finalReport) ? (
-          <div>
-            <VerificationResults report={finalReport} />
-            <div className="text-center mt-8">
-              <button
-                onClick={handleNewUpload}
-                className="btn-sui text-white py-3 px-8 rounded-lg font-semibold shadow-lg"
+        <AnimatePresence mode="wait">
+          {!currentJobId ? (
+            <motion.div 
+              key="upload"
+              className="bg-dark-surface border border-dark-border rounded-lg p-6 sm:p-8 max-w-3xl mx-auto hover-lift"
+              variants={cardEntrance}
+              initial="hidden"
+              animate="visible"
+              exit={{ opacity: 0, y: 20 }}
+              whileHover={{ scale: 1.01 }}
+            >
+              <motion.h2 
+                className="text-2xl font-bold text-center mb-8 text-dark-text"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
               >
-                Analyze Another Image
-              </button>
-            </div>
-          </div>
-        ) : (status === 'PROCESSING') ? (
-          <div className="text-center mt-8">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#4DA2FF] border-t-transparent"></div>
-            <p className="mt-4 text-dark-muted">Processing...</p>
-          </div>
-        ) : null}
+                Upload Media to Verify
+              </motion.h2>
+              <MediaUploader 
+                onUploadComplete={handleUploadComplete}
+                onUploadStart={handleUploadStart}
+              />
+            </motion.div>
+          ) : (status === 'COMPLETED' && finalReport) ? (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+            >
+              <VerificationResults report={finalReport} />
+              <motion.div 
+                className="text-center mt-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <motion.button
+                  onClick={handleNewUpload}
+                  className="btn-sui text-white py-3 px-8 rounded-lg font-semibold shadow-lg"
+                  whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(77, 162, 255, 0.5)' }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Analyze Another Image
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          ) : (status === 'PROCESSING') ? (
+            <motion.div 
+              key="processing"
+              className="text-center mt-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div 
+                className="inline-block rounded-full h-12 w-12 border-4 border-[#4DA2FF] border-t-transparent"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+              <motion.p 
+                className="mt-4 text-dark-muted"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                Processing...
+              </motion.p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {/* Technology Stack */}
         <div className="mt-12 text-center text-sm text-dark-muted">
@@ -306,7 +412,7 @@ export default function Home() {
             <span className="px-3 py-1 bg-dark-surface border border-dark-border rounded-full">SUI Blockchain</span>
           </div>
         </div>
-      </div>
-    </main>
+      </motion.div>
+    </motion.main>
   );
 }

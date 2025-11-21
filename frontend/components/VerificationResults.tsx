@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import EnsembleGauge from './charts/EnsembleGauge';
 import ModelScoresBar from './charts/ModelScoresBar';
 import FileInfoCard from './FileInfoCard';
+import Card3D from './Card3D';
+import { staggerContainer, cardEntrance, itemVariants, expandCollapse, iconRotate } from '@/lib/animations';
+import { blockchainConfetti } from '@/lib/confetti';
 
 interface VerificationResultsProps {
   report: any;
@@ -21,11 +25,22 @@ export default function VerificationResults({ report }: VerificationResultsProps
   });
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    const newState = !expandedSections[section];
+    setExpandedSections(prev => ({ ...prev, [section]: newState }));
+    
+    // Trigger confetti when blockchain section is expanded
+    if (section === 'blockchain' && newState && report.blockchainAttestation) {
+      setTimeout(() => blockchainConfetti(), 200);
+    }
   };
 
   const analysisData = report.analysisData;
   const ensembleScore = analysisData?.aiDetection?.ensembleScore || 0;
+  
+  // Initial animation on mount
+  useEffect(() => {
+    // Component mounted, stagger animations will play
+  }, []);
 
   const getScoreLabel = (score: number) => {
     if (score >= 0.8) return { text: 'High AI Likelihood', color: 'text-red-400' };
@@ -36,21 +51,48 @@ export default function VerificationResults({ report }: VerificationResultsProps
   const scoreInfo = getScoreLabel(ensembleScore);
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <motion.div 
+      className="max-w-5xl mx-auto"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Analysis Summary */}
-      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6 text-center">
-        <h2 className="text-2xl font-bold text-dark-text mb-2">Analysis Result</h2>
-        <p className="text-3xl font-bold mb-2" style={{ 
-          color: ensembleScore >= 0.8 ? '#EF4444' : ensembleScore >= 0.5 ? '#F97316' : '#22C55E' 
-        }}>
-          {ensembleScore >= 0.8 ? '🤖 Likely AI-Generated' :
-           ensembleScore >= 0.5 ? '⚠️ Possibly AI-Generated' :
-           '✓ Likely Authentic'}
-        </p>
-        <p className="text-dark-muted text-sm">
-          AI Score: <span className="font-mono font-bold">{(ensembleScore * 100).toFixed(1)}%</span>
-        </p>
-      </div>
+      <Card3D intensity={0.3}>
+        <motion.div 
+          className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6 text-center"
+          variants={cardEntrance}
+        >
+          <motion.h2 
+            className="text-2xl font-bold text-dark-text mb-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            Analysis Result
+          </motion.h2>
+          <motion.p 
+            className="text-3xl font-bold mb-2" 
+            style={{ 
+              color: ensembleScore >= 0.8 ? '#EF4444' : ensembleScore >= 0.5 ? '#F97316' : '#22C55E' 
+            }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.2 }}
+          >
+            {ensembleScore >= 0.8 ? '🤖 Likely AI-Generated' :
+             ensembleScore >= 0.5 ? '⚠️ Possibly AI-Generated' :
+             '✓ Likely Authentic'}
+          </motion.p>
+          <motion.p 
+            className="text-dark-muted text-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            AI Score: <span className="font-mono font-bold">{(ensembleScore * 100).toFixed(1)}%</span>
+          </motion.p>
+        </motion.div>
+      </Card3D>
 
       {/* Ensemble Score Gauge */}
       <EnsembleGauge score={ensembleScore} />
@@ -231,6 +273,6 @@ export default function VerificationResults({ report }: VerificationResultsProps
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface ModelScoresBarProps {
@@ -41,7 +42,12 @@ export default function ModelScoresBar({ modelScores }: ModelScoresBarProps) {
   };
 
   return (
-    <div className="w-full h-80">
+    <motion.div 
+      className="w-full h-80"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
@@ -60,14 +66,20 @@ export default function ModelScoresBar({ modelScores }: ModelScoresBarProps) {
             label={{ value: 'AI Score (%)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+          <Bar 
+            dataKey="score" 
+            radius={[8, 8, 0, 0]}
+            animationBegin={300}
+            animationDuration={1000}
+            animationEasing="ease-out"
+          >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getBarColor(entry.score)} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }
 
