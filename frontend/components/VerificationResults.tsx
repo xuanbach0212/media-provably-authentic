@@ -116,16 +116,37 @@ export default function VerificationResults({ report }: VerificationResultsProps
 
             <h4 className="font-semibold text-dark-text mt-4 mb-2">Frequency Analysis:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <p><strong>DCT Anomaly Score:</strong> {analysisData.aiDetection.frequencyAnalysis?.dct_anomaly_score?.toFixed(2)}</p>
-              <p><strong>FFT Anomaly Score:</strong> {analysisData.aiDetection.frequencyAnalysis?.fft_anomaly_score?.toFixed(2)}</p>
+              <p><strong>DCT AI Score:</strong> {(analysisData.aiDetection.frequencyAnalysis?.dct_ai_score !== undefined 
+                ? (analysisData.aiDetection.frequencyAnalysis.dct_ai_score * 100).toFixed(1) + '%' 
+                : 'N/A')}</p>
+              <p><strong>FFT AI Score:</strong> {(analysisData.aiDetection.frequencyAnalysis?.fft_ai_score !== undefined 
+                ? (analysisData.aiDetection.frequencyAnalysis.fft_ai_score * 100).toFixed(1) + '%' 
+                : 'N/A')}</p>
+              <p><strong>Frequency AI Score:</strong> {(analysisData.aiDetection.frequencyAnalysis?.frequency_ai_score !== undefined 
+                ? (analysisData.aiDetection.frequencyAnalysis.frequency_ai_score * 100).toFixed(1) + '%' 
+                : 'N/A')}</p>
             </div>
 
             <h4 className="font-semibold text-dark-text mt-4 mb-2">Quality Assessment:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <p><strong>Blurriness:</strong> {analysisData.aiDetection.qualityMetrics?.blurriness?.toFixed(2) || 'N/A'}</p>
-              <p><strong>Exposure:</strong> {analysisData.aiDetection.qualityMetrics?.exposure?.toFixed(2) || 'N/A'}</p>
-              <p><strong>Colorfulness:</strong> {analysisData.aiDetection.qualityMetrics?.colorfulness?.toFixed(2) || 'N/A'}</p>
-              <p><strong>Overall Quality:</strong> {analysisData.aiDetection.qualityMetrics?.overall_quality?.toFixed(2) || 'N/A'}</p>
+              <p><strong>Sharpness:</strong> {(analysisData.aiDetection.qualityMetrics?.sharpness?.score !== undefined 
+                ? (analysisData.aiDetection.qualityMetrics.sharpness.score * 100).toFixed(1) + '% - ' + analysisData.aiDetection.qualityMetrics.sharpness.quality 
+                : 'N/A')}</p>
+              <p><strong>Contrast:</strong> {(analysisData.aiDetection.qualityMetrics?.contrast?.score !== undefined 
+                ? (analysisData.aiDetection.qualityMetrics.contrast.score * 100).toFixed(1) + '% - ' + analysisData.aiDetection.qualityMetrics.contrast.quality 
+                : 'N/A')}</p>
+              <p><strong>Brightness:</strong> {(analysisData.aiDetection.qualityMetrics?.brightness?.score !== undefined 
+                ? (analysisData.aiDetection.qualityMetrics.brightness.score * 100).toFixed(1) + '% - ' + analysisData.aiDetection.qualityMetrics.brightness.quality 
+                : 'N/A')}</p>
+              <p><strong>Noise Level:</strong> {(analysisData.aiDetection.qualityMetrics?.noise?.score !== undefined 
+                ? (analysisData.aiDetection.qualityMetrics.noise.score * 100).toFixed(1) + '% - ' + analysisData.aiDetection.qualityMetrics.noise.quality 
+                : 'N/A')}</p>
+              <p><strong>Resolution:</strong> {(analysisData.aiDetection.qualityMetrics?.resolution?.quality 
+                ? analysisData.aiDetection.qualityMetrics.resolution.quality + ' (' + analysisData.aiDetection.qualityMetrics.resolution.width + 'x' + analysisData.aiDetection.qualityMetrics.resolution.height + ')' 
+                : 'N/A')}</p>
+              <p><strong>Overall Quality:</strong> {(analysisData.aiDetection.qualityMetrics?.overall_quality !== undefined 
+                ? (analysisData.aiDetection.qualityMetrics.overall_quality * 100).toFixed(1) + '%' 
+                : 'N/A')}</p>
             </div>
 
             {/* Raw Forensic Data */}
