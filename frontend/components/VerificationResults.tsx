@@ -37,6 +37,21 @@ export default function VerificationResults({ report }: VerificationResultsProps
 
   return (
     <div className="max-w-5xl mx-auto">
+      {/* Analysis Summary */}
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6 text-center">
+        <h2 className="text-2xl font-bold text-dark-text mb-2">Analysis Result</h2>
+        <p className="text-3xl font-bold mb-2" style={{ 
+          color: ensembleScore >= 0.8 ? '#EF4444' : ensembleScore >= 0.5 ? '#F97316' : '#22C55E' 
+        }}>
+          {ensembleScore >= 0.8 ? '🤖 Likely AI-Generated' :
+           ensembleScore >= 0.5 ? '⚠️ Possibly AI-Generated' :
+           '✓ Likely Authentic'}
+        </p>
+        <p className="text-dark-muted text-sm">
+          AI Score: <span className="font-mono font-bold">{(ensembleScore * 100).toFixed(1)}%</span>
+        </p>
+      </div>
+
       {/* Ensemble Score Gauge */}
       <EnsembleGauge score={ensembleScore} />
 
@@ -106,9 +121,10 @@ export default function VerificationResults({ report }: VerificationResultsProps
 
             <h4 className="font-semibold text-dark-text mt-4 mb-2">Quality Assessment:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <p><strong>Blurriness:</strong> {analysisData.aiDetection.qualityAssessment?.blurriness?.toFixed(2)}</p>
-              <p><strong>Exposure:</strong> {analysisData.aiDetection.qualityAssessment?.exposure?.toFixed(2)}</p>
-              <p><strong>Colorfulness:</strong> {analysisData.aiDetection.qualityAssessment?.colorfulness?.toFixed(2)}</p>
+              <p><strong>Blurriness:</strong> {analysisData.aiDetection.qualityMetrics?.blurriness?.toFixed(2) || 'N/A'}</p>
+              <p><strong>Exposure:</strong> {analysisData.aiDetection.qualityMetrics?.exposure?.toFixed(2) || 'N/A'}</p>
+              <p><strong>Colorfulness:</strong> {analysisData.aiDetection.qualityMetrics?.colorfulness?.toFixed(2) || 'N/A'}</p>
+              <p><strong>Overall Quality:</strong> {analysisData.aiDetection.qualityMetrics?.overall_quality?.toFixed(2) || 'N/A'}</p>
             </div>
 
             {/* Raw Forensic Data */}
@@ -140,20 +156,31 @@ export default function VerificationResults({ report }: VerificationResultsProps
         {expandedSections.reverseSearch && (
           <div className="mt-4 pt-4 border-t border-dark-border text-sm text-dark-muted">
             {analysisData?.reverseSearch?.matches && analysisData.reverseSearch.matches.length > 0 ? (
-              <ul className="space-y-3">
-                {analysisData.reverseSearch.matches.map((match: any, index: number) => (
-                  <li key={index} className="bg-dark-bg p-3 rounded-md border border-dark-border">
-                    <a href={match.link} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-semibold block">
-                      {match.title || 'No Title'}
-                    </a>
-                    <p className="text-xs text-dark-muted mt-1">{match.source}</p>
-                    <p className="text-xs text-dark-muted">Similarity: {(match.similarity * 100).toFixed(1)}%</p>
-                    {match.first_seen && <p className="text-xs text-dark-muted">First Seen: {new Date(match.first_seen).toLocaleDateString()}</p>}
-                  </li>
-                ))}
-              </ul>
+              <div>
+                <p className="text-green-400 mb-3 font-semibold">
+                  ✅ Found {analysisData.reverseSearch.matches.length} similar {analysisData.reverseSearch.matches.length === 1 ? 'result' : 'results'} on Google
+                </p>
+                <ul className="space-y-3">
+                  {analysisData.reverseSearch.matches.map((match: any, index: number) => (
+                    <li key={index} className="bg-dark-bg p-3 rounded-md border border-dark-border">
+                      <a href={match.link || match.url} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-semibold block">
+                        {match.title || match.metadata?.title || 'Untitled'}
+                      </a>
+                      <p className="text-xs text-dark-muted mt-1">Source: {match.source || match.metadata?.publisher || 'N/A'}</p>
+                      <p className="text-xs text-dark-muted">Similarity: {(match.similarity * 100).toFixed(1)}%</p>
+                      {(match.first_seen || match.firstSeen) && (
+                        <p className="text-xs text-dark-muted">
+                          First seen: {new Date(match.first_seen || match.firstSeen).toLocaleDateString('en-US')}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : analysisData?.reverseSearch === null ? (
+              <p className="text-yellow-400">⚠️ Reverse search skipped (AI score between 50-80%)</p>
             ) : (
-              <p className="text-dark-muted">No significant matches found on Google Reverse Image Search.</p>
+              <p className="text-dark-muted">❌ No similar results found on Google</p>
             )}
           </div>
         )}

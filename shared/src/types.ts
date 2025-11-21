@@ -62,24 +62,66 @@ export interface ForensicMetrics {
   colorDistribution: any;
   compressionArtifactsDetected?: boolean;
   metadata_consistency?: boolean;
+  // Python returns these fields
+  compression_artifacts?: number;
+  sharpness?: number;
+  noise_level?: number;
+  color_saturation?: number;
+  brightness?: number;
+  contrast?: number;
+  exif_data_present?: boolean;
+  exif_data?: any;
+  manipulation_likelihood?: number;
   [key: string]: any;
 }
 
 export interface FrequencyMetrics {
   dctAnalysis: any;
   fftAnalysis: any;
+  // Python returns these fields
+  dct_anomaly_score?: number;
+  fft_anomaly_score?: number;
+  frequency_ai_score?: number;
+  [key: string]: any;
 }
 
 export interface QualityMetrics {
   sharpness: number;
   brightness: number;
   contrast: number;
+  // Python returns these fields
+  blurriness?: number;
+  exposure?: number;
+  colorfulness?: number;
+  overall_quality?: number;
+  enhancement_applied?: string;
+  [key: string]: any;
+}
+
+// Individual model score from Python
+export interface IndividualModelScore {
+  ai_score: number;
+  deepfake_score: number;
+  confidence: number;
+  weight: number;
+}
+
+// Model scores structure from Python
+export interface ModelScoresData {
+  ai_generated_score: number;
+  deepfake_score: number;
+  manipulation_score: number;
+  authenticity_score: number;
+  frequency_ai_score?: number;
+  ensemble_model_count: number;
+  individual_models: {
+    [modelName: string]: IndividualModelScore;
+  };
+  ensemble_metadata?: any;
 }
 
 export interface AIDetectionResult {
-  modelScores: {
-    [modelName: string]: number;
-  };
+  modelScores: ModelScoresData; // Updated to match Python structure
   ensembleScore: number;
   forensicAnalysis: ForensicMetrics;
   frequencyAnalysis: FrequencyMetrics;
@@ -115,89 +157,57 @@ export interface VerificationReport {
   reportStorageCID?: string; // Walrus CID for the report itself
   blockchainAttestation?: BlockchainAttestation; // On-chain attestation
   encryptionMetadata?: EncryptionMetadata; // Encryption info
+  metadata?: MediaMetadata; // File metadata
 }
 
 export interface BlockchainAttestation {
   attestationId: string;
-  jobId?: string;
-  mediaHash?: string;
-  reportCID?: string;
-  enclaveSignature?: string;
+  txHash: string;
+  blockNumber: number;
   timestamp: string;
-  blockNumber?: number;
-  txHash?: string;
+  // For frontend display
+  transactionHash?: string;
+  reportCID?: string;
+  enclaveId?: string;
 }
 
-export interface WalrusBlob {
-  blobId: string;
-  data: Buffer | string;
-  metadata?: Record<string, any>;
-  uploadedAt: string;
-}
-
-export interface SealPolicy {
-  policyId: string;
-  allowedEnclaves: string[];
-  createdAt: string;
-}
-
-// API Request/Response types
-
-export interface UploadRequest {
-  file: Buffer;
-  filename: string;
-  userId: string;
-  signature: string;
-}
-
-export interface UploadResponse {
-  jobId: string;
-  mediaCID: string;
-  status: JobStatus;
-}
-
-export interface VerifyRequest {
-  jobId: string;
-}
-
-export interface VerifyResponse {
-  jobId: string;
-  status: JobStatus;
-  report?: VerificationReport;
-  attestation?: BlockchainAttestation;
+export interface ConsensusMetadata {
+  enclaveCount: number;
+  agreementRate: number;
+  consensusTimestamp: string;
+  finalVerdict?: string;
+  confidence?: number;
 }
 
 export interface JobStatusResponse {
   jobId: string;
   status: JobStatus;
-  progress?: number;
-  message?: string;
   report?: VerificationReport;
+  analysisData?: AnalysisData;
+  error?: string;
+  consensusMetadata?: ConsensusMetadata;
 }
 
 // Socket.IO event types
 export interface ProgressUpdate {
+  jobId: string;
   stage: number;
   stageName: string;
   substep: string;
-  progress: number;
+  progress: number; // 0-100
   timestamp: string;
-  metadata?: {
-    enclaveId?: string;
-    modelName?: string;
-    uploadProgress?: number;
-  };
+  metadata?: any;
 }
 
 export interface ErrorUpdate {
-  stage: number;
+  jobId: string;
   message: string;
   retryable: boolean;
   timestamp: string;
-  details?: any;
 }
 
-export interface SocketAuthData {
-  walletAddress: string;
-  signature: string;
+export interface JobCompleteEvent {
+  jobId: string;
+  report: VerificationReport;
+  timestamp: string;
 }

@@ -63,11 +63,10 @@ export default function EnsembleGauge({ score }: EnsembleGaugeProps) {
       </div>
       
       <div className="mt-4 text-center">
-        <div className="text-sm font-semibold" style={{ color }}>
-          {getScoreLabel(score)}
-        </div>
-        <div className="text-xs text-dark-muted mt-1">
-          Higher score = more likely AI-generated
+        <div className="text-lg font-bold mb-2" style={{ color }}>
+          {percentage >= 80 ? '🤖 Likely AI-Generated' :
+           percentage >= 50 ? '⚠️ Possibly AI-Generated' :
+           '✓ Likely Authentic'}
         </div>
       </div>
     </div>

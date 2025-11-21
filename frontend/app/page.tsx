@@ -29,6 +29,8 @@ export default function Home() {
   useEffect(() => {
     if (!currentJobId) return;
 
+    console.log('[Page] Setting up socket for job:', currentJobId);
+
     // Get wallet info
     const walletAddress = sessionStorage.getItem('walletAddress') || 'anonymous';
     const signature = sessionStorage.getItem('signature') || '';
@@ -39,16 +41,21 @@ export default function Home() {
     // Subscribe to job updates
     socketClient.subscribeToJob(currentJobId, {
       onProgress: (data: ProgressUpdate) => {
+        console.log('[Page] Progress:', data.progress, data.substep);
         setCurrentStage(data.stage);
         setProgress(data.progress);
         setSubstep(data.substep);
         setStatus('PROCESSING');
       },
       onError: (errorData: ErrorUpdate) => {
+        console.error('[Page] Error:', errorData.message);
         setError(errorData.message);
         setStatus('FAILED');
       },
       onComplete: (report: any) => {
+        console.log('[Page] Job completed! Report:', report);
+        console.log('[Page] Report has analysisData:', !!report.analysisData);
+        console.log('[Page] Report has aiDetection:', !!report.analysisData?.aiDetection);
         setFinalReport(report);
         setStatus('COMPLETED');
         setProgress(100);
@@ -56,10 +63,11 @@ export default function Home() {
       },
     });
 
-    // Cleanup
+    // Cleanup - but DON'T disconnect immediately after complete
     return () => {
+      console.log('[Page] Cleanup for job:', currentJobId);
       socketClient.unsubscribeFromJob(currentJobId);
-      socketClient.disconnect();
+      // Don't disconnect socket here - keep it alive
     };
   }, [currentJobId, socketClient]);
 
@@ -246,7 +254,7 @@ export default function Home() {
             </h2>
             <MediaUploader onUploadComplete={handleUploadComplete} />
           </div>
-        ) : status === 'COMPLETED' && finalReport ? (
+        ) : (status === 'COMPLETED' && finalReport) ? (
           <div>
             <VerificationResults report={finalReport} />
             <div className="text-center mt-8">
@@ -257,6 +265,11 @@ export default function Home() {
                 Analyze Another Image
               </button>
             </div>
+          </div>
+        ) : (status === 'PROCESSING') ? (
+          <div className="text-center mt-8">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#4DA2FF] border-t-transparent"></div>
+            <p className="mt-4 text-dark-muted">Processing...</p>
           </div>
         ) : null}
 

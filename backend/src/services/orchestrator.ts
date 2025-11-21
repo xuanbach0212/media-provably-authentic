@@ -137,7 +137,14 @@ export class OrchestrationService {
       console.error("AI detection failed:", error.message);
       // Return a default result if AI detection fails
       return {
-        modelScores: {},
+        modelScores: {
+          ai_generated_score: 0.5,
+          deepfake_score: 0.5,
+          manipulation_score: 0.5,
+          authenticity_score: 0.5,
+          ensemble_model_count: 0,
+          individual_models: {},
+        },
         ensembleScore: 0.5,
         forensicAnalysis: {
           exifData: {},
