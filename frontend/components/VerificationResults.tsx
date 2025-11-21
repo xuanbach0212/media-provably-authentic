@@ -56,12 +56,13 @@ export default function VerificationResults({ report }: VerificationResultsProps
       <EnsembleGauge score={ensembleScore} />
 
       {/* File Information Card */}
-      {analysisData?.aiDetection?.forensicAnalysis && (
+      {analysisData?.forensicAnalysis && (
         <FileInfoCard
-          filename={report.metadata?.filename || 'N/A'}
-          mimeType={report.metadata?.mimeType || 'N/A'}
-          fileSize={report.metadata?.size || 0}
-          mediaHash={report.mediaHash || 'N/A'}
+          filename={analysisData.forensicAnalysis.filename}
+          mimeType={analysisData.forensicAnalysis.mimeType}
+          fileSize={analysisData.forensicAnalysis.fileSize}
+          uploadedAt={analysisData.forensicAnalysis.uploadedAt}
+          mediaHash={report.mediaHash}
           forensicAnalysis={analysisData.aiDetection.forensicAnalysis}
         />
       )}

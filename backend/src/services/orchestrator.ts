@@ -69,9 +69,12 @@ export class OrchestrationService {
       aiDetection,
       reverseSearch,
       forensicAnalysis: {
+        filename: job.metadata.filename,
         fileSize: job.metadata.size,
         mimeType: job.metadata.mimeType,
         uploadedAt: job.metadata.uploadedAt,
+        width: aiDetection.forensicAnalysis.width,
+        height: aiDetection.forensicAnalysis.height,
       },
     };
 
