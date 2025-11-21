@@ -129,11 +129,15 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6">
+    <div className="w-full max-w-2xl mx-auto">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center ${
-          dragActive ? 'border-blue-500 bg-blue-900/20' : 'border-dark-border'
-        } ${file ? 'border-green-500' : ''}`}
+        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+          dragActive 
+            ? 'border-[#4DA2FF] bg-[#4DA2FF]/10 scale-105' 
+            : file 
+            ? 'border-[#14B8A6] bg-[#14B8A6]/5' 
+            : 'border-gray-700 bg-gray-900/30 hover:border-gray-600'
+        }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -150,30 +154,34 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
         />
 
         {!preview ? (
-          <label htmlFor="file-upload" className="cursor-pointer">
-            <div className="space-y-4">
-              <svg
-                className="mx-auto h-12 w-12 text-dark-muted"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="text-gray-600">
-                <span className="font-semibold text-blue-600 hover:text-blue-500">
-                  Click to upload
-                </span>{' '}
-                or drag and drop
+          <label htmlFor="file-upload" className="cursor-pointer block">
+            <div className="space-y-5">
+              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#06B6D4] flex items-center justify-center">
+                <svg
+                  className="h-8 w-8 text-white"
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
-              <p className="text-sm text-gray-500">
-                Image or video up to 100MB
+              <div>
+                <p className="text-lg font-semibold text-white mb-1">
+                  Drop your media here
+                </p>
+                <p className="text-sm text-gray-400">
+                  or <span className="text-[#4DA2FF] font-medium hover:text-[#6FBCFF] transition-colors">browse files</span>
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">
+                Supports: Images & Videos • Max size: 100MB
               </p>
             </div>
           </label>
@@ -183,28 +191,30 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
               <img
                 src={preview}
                 alt="Preview"
-                className="max-h-64 mx-auto rounded border border-dark-border"
+                className="max-h-64 mx-auto rounded-lg border-2 border-[#14B8A6]/50 shadow-xl"
               />
             )}
             {file?.type.startsWith('video/') && (
               <video
                 src={preview}
-                className="max-h-64 mx-auto rounded border border-dark-border"
+                className="max-h-64 mx-auto rounded-lg border-2 border-[#14B8A6]/50 shadow-xl"
                 controls
               />
             )}
-            <div className="text-sm text-dark-text">
-              {file?.name} ({(file!.size / 1024 / 1024).toFixed(2)} MB)
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <span className="text-white font-medium">{file?.name}</span>
+              <span className="text-gray-500">•</span>
+              <span className="text-[#4DA2FF]">{(file!.size / 1024 / 1024).toFixed(2)} MB</span>
             </div>
             <button
               onClick={() => {
                 setFile(null);
                 setPreview(null);
               }}
-              className="text-sm text-red-400 hover:text-red-300"
+              className="text-sm text-red-400 hover:text-red-300 transition-colors font-medium"
               disabled={uploading}
             >
-              Remove
+              ✕ Remove
             </button>
           </div>
         )}
@@ -217,9 +227,9 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
       )}
 
       {!account && (
-        <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-900 rounded-lg text-center">
-          <p className="text-sm text-yellow-400">
-            Please connect your Sui wallet to upload and verify media
+        <div className="mt-6 p-5 bg-gradient-to-r from-yellow-900/10 to-orange-900/10 border border-yellow-700/50 rounded-xl text-center backdrop-blur-sm">
+          <p className="text-sm text-yellow-300 font-medium">
+            ⚠️ Connect your Sui wallet to verify media authenticity
           </p>
         </div>
       )}
@@ -227,16 +237,17 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
       {file && !uploading && account && (
         <button
           onClick={handleUpload}
-          className="mt-6 w-full btn-sui text-white py-3 px-6 rounded-lg font-semibold shadow-lg"
+          className="mt-6 w-full btn-sui text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-all"
         >
-          Sign & Verify Authenticity
+          🔐 Sign & Verify Authenticity
         </button>
       )}
 
       {uploading && (
-        <div className="mt-6 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-2 text-dark-muted">Uploading and encrypting...</p>
+        <div className="mt-6 text-center p-6 bg-[#4DA2FF]/10 rounded-xl border border-[#4DA2FF]/30">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-[#4DA2FF] border-t-transparent"></div>
+          <p className="mt-3 text-white font-medium">Uploading and encrypting...</p>
+          <p className="mt-1 text-xs text-gray-400">Please wait while we secure your media</p>
         </div>
       )}
     </div>

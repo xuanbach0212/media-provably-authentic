@@ -17,8 +17,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Media Provably Authentic",
-  description: "Verify media authenticity with AI detection, provenance tracking, and blockchain attestations",
+  title: "VerifyMedia - AI-Powered Media Authenticity Verification",
+  description: "Verify media authenticity with advanced AI detection, provenance tracking, and blockchain attestations. Detect deepfakes and AI-generated content using the SUI ecosystem.",
+  keywords: ["media verification", "deepfake detection", "AI detection", "blockchain", "SUI", "authenticity"],
+  authors: [{ name: "VerifyMedia Team" }],
+  openGraph: {
+    title: "VerifyMedia - AI-Powered Media Authenticity Verification",
+    description: "Detect deepfakes, trace origins, and prove authenticity using advanced AI and blockchain technology",
+    type: "website",
+    locale: "en_US",
+    siteName: "VerifyMedia",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VerifyMedia - AI-Powered Media Authenticity Verification",
+    description: "Detect deepfakes, trace origins, and prove authenticity using advanced AI and blockchain technology",
+  },
 };
 
 export default function RootLayout({
@@ -29,11 +43,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{ background: 'var(--theme-background)' }}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}
       >
-        <ParticlesBackground />
-        <ShootingStars />
+        {/* 3D Background - Always visible */}
+        <div className="fixed inset-0 z-0">
+          <ParticlesBackground />
+          <ShootingStars />
+        </div>
+        
         <ThemeProvider>
           <AppWalletProvider>
             <div className="relative z-10">
