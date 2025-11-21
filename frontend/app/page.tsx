@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaUploader from '@/components/MediaUploader';
 import VerificationResults from '@/components/VerificationResults';
 import { WalletConnect } from '@/components/WalletConnect';
-import ThemeSwitcher from '@/components/ThemeSwitcher';
+import FeaturesSection from '@/components/FeaturesSection';
 import { FaCheckCircle, FaSpinner, FaTimesCircle } from 'react-icons/fa';
 import { SocketClient, ProgressUpdate, ErrorUpdate } from '@/lib/socket';
 import { 
@@ -154,12 +154,11 @@ export default function Home() {
       >
         {/* Top Bar */}
         <motion.div 
-          className="flex justify-end items-center gap-3 mb-8"
+          className="flex justify-end items-center mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <ThemeSwitcher />
           <WalletConnect />
         </motion.div>
 
@@ -195,30 +194,8 @@ export default function Home() {
           </motion.p>
         </motion.div>
 
-        {/* Features */}
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
-          <div className="bg-dark-surface border border-dark-border p-6 rounded-lg">
-            <div className="text-3xl mb-3">🔍</div>
-            <h3 className="text-lg font-semibold mb-2 text-dark-text">AI Detection</h3>
-            <p className="text-sm text-dark-muted">
-              Advanced AI models detect deepfakes and AI-generated content
-            </p>
-          </div>
-          <div className="bg-dark-surface border border-dark-border p-6 rounded-lg">
-            <div className="text-3xl mb-3">📜</div>
-            <h3 className="text-lg font-semibold mb-2 text-dark-text">Provenance Tracking</h3>
-            <p className="text-sm text-dark-muted">
-              Trace media origins through reverse image search and metadata analysis
-            </p>
-          </div>
-          <div className="bg-dark-surface border border-dark-border p-6 rounded-lg sm:col-span-2 md:col-span-1">
-            <div className="text-3xl mb-3">⛓️</div>
-            <h3 className="text-lg font-semibold mb-2 text-dark-text">Blockchain Proof</h3>
-            <p className="text-sm text-dark-muted">
-              Immutable attestations stored on SUI blockchain with TEE verification
-            </p>
-          </div>
-        </div>
+        {/* Features Section */}
+        <FeaturesSection />
 
         {/* Process Tree - Always visible - Sui Style */}
         <motion.div 

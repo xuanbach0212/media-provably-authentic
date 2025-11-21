@@ -25,78 +25,104 @@ export default function ParticlesBackground() {
       events: {
         onHover: {
           enable: true,
-          mode: 'bubble',
+          mode: ['bubble', 'connect'],
         },
         resize: true,
       },
       modes: {
         bubble: {
-          distance: 100,
+          distance: 150,
           duration: 2,
-          opacity: 0.8,
-          size: 6,
+          opacity: 1,
+          size: 8,
         },
-        repulse: {
+        connect: {
           distance: 100,
-          duration: 0.4,
+          links: {
+            opacity: 0.3,
+          },
         },
       },
     },
     particles: {
       color: {
-        value: ['#4DA2FF', '#6FBCFF', '#06B6D4', '#22D3EE', '#14B8A6'],
+        value: ['#4DA2FF', '#6FBCFF', '#06B6D4', '#22D3EE', '#14B8A6', '#10B981', '#8B5CF6'],
       },
       links: {
         enable: false,
       },
       move: {
         enable: true,
-        speed: 0.5,
+        speed: { min: 0.3, max: 1.5 },
         direction: 'none',
         random: true,
         straight: false,
         outModes: {
           default: 'out',
         },
+        attract: {
+          enable: true,
+          rotate: {
+            x: 600,
+            y: 1200,
+          },
+        },
       },
       number: {
-        value: 50,
+        value: 150,
         density: {
           enable: true,
           area: 800,
         },
       },
       opacity: {
-        value: 0.4,
+        value: { min: 0.2, max: 0.8 },
         random: true,
         animation: {
           enable: true,
-          speed: 0.5,
+          speed: 1,
           minimumValue: 0.1,
           sync: false,
         },
       },
       shape: {
-        type: 'circle',
+        type: ['circle', 'triangle', 'square'],
       },
       size: {
-        value: { min: 1, max: 3 },
+        value: { min: 1, max: 5 },
         random: true,
+        animation: {
+          enable: true,
+          speed: 2,
+          minimumValue: 0.5,
+          sync: false,
+        },
+      },
+      stroke: {
+        width: 0,
+      },
+      twinkle: {
+        particles: {
+          enable: true,
+          frequency: 0.05,
+          opacity: 1,
+        },
       },
     },
     detectRetina: true,
     fullScreen: {
-      enable: false,
-      zIndex: -1,
+      enable: true,
+      zIndex: 0,
     },
   }), []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+    <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
       <Particles
         id="tsparticles"
         init={particlesInit}
         options={options as any}
+        className="w-full h-full"
       />
     </div>
   );

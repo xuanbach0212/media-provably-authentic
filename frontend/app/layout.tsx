@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppWalletProvider } from "@/providers/WalletProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ParticlesBackground from "@/components/ParticlesBackground";
+import ShootingStars from "@/components/ShootingStars";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         style={{ background: 'var(--theme-background)' }}
       >
         <ParticlesBackground />
+        <ShootingStars />
         <ThemeProvider>
           <AppWalletProvider>
             <div className="relative z-10">
