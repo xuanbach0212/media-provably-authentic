@@ -129,14 +129,14 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full">
       <div
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+        className={`relative rounded-xl p-10 text-center transition-all duration-500 border-2 ${
           dragActive 
-            ? 'border-[#4DA2FF] bg-[#4DA2FF]/10 scale-105' 
+            ? 'border-[#4DA2FF] bg-[#4DA2FF]/10' 
             : file 
-            ? 'border-[#14B8A6] bg-[#14B8A6]/5' 
-            : 'border-gray-700 bg-gray-900/30 hover:border-gray-600'
+            ? 'border-[#22C55E] bg-[#22C55E]/10' 
+            : 'border-gray-700 bg-gray-900/30 hover:border-gray-600 hover:bg-gray-900/50'
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -155,34 +155,40 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
 
         {!preview ? (
           <label htmlFor="file-upload" className="cursor-pointer block">
-            <div className="space-y-5">
-              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#06B6D4] flex items-center justify-center">
-                <svg
-                  className="h-8 w-8 text-white"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+            <div className="space-y-7">
+              {/* Icon with pulse animation */}
+              <div className="relative mx-auto w-24 h-24">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#06B6D4] animate-pulse opacity-30"></div>
+                <div className="relative w-full h-full rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#06B6D4] flex items-center justify-center shadow-2xl shadow-[#4DA2FF]/50">
+                  <svg
+                    className="h-12 w-12 text-white"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 48 48"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
               <div>
-                <p className="text-lg font-semibold text-white mb-1">
+                <p className="text-2xl font-bold text-white mb-2 bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] bg-clip-text text-transparent">
                   Drop your media here
                 </p>
-                <p className="text-sm text-gray-400">
-                  or <span className="text-[#4DA2FF] font-medium hover:text-[#6FBCFF] transition-colors">browse files</span>
+                <p className="text-base text-gray-300">
+                  or <span className="text-[#4DA2FF] font-semibold hover:text-[#6FBCFF] transition-colors cursor-pointer underline decoration-dotted">browse files</span>
                 </p>
               </div>
-              <p className="text-xs text-gray-500">
-                Supports: Images & Videos • Max size: 100MB
-              </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800/50 border border-gray-700/50">
+                <span className="text-sm text-gray-400 font-medium">📸 Images & 🎬 Videos</span>
+                <span className="text-gray-600">•</span>
+                <span className="text-sm text-gray-400 font-medium">Max 100MB</span>
+              </div>
             </div>
           </label>
         ) : (

@@ -201,29 +201,29 @@ export default function TreeNode3D({ node, status, onHover, onClick }: TreeNode3
             />
           )}
           
-          {/* Main orb - Beautiful glowing sphere */}
+          {/* Main orb - LARGER Beautiful glowing sphere */}
           <motion.div
-            className="w-4 h-4 rounded-full relative z-10"
+            className="w-6 h-6 rounded-full relative z-10"
             style={{ 
               background: status === 'pending' 
                 ? 'linear-gradient(135deg, #374151 0%, #1F2937 100%)'
                 : `linear-gradient(135deg, ${node.color} 0%, ${node.color}CC 100%)`,
               boxShadow: status === 'active' || status === 'processing' 
-                ? `0 0 15px ${node.color}, 0 0 30px ${node.color}90, 0 0 45px ${node.color}60, inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.3)` 
+                ? `0 0 20px ${node.color}, 0 0 40px ${node.color}90, 0 0 60px ${node.color}60, inset 0 3px 6px rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.4)` 
                 : status === 'completed'
-                ? `0 0 12px #22C55E, 0 0 24px #22C55E80, inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.3)`
+                ? `0 0 16px #22C55E, 0 0 32px #22C55E80, inset 0 3px 6px rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.4)`
                 : status === 'pending'
-                ? `0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.5)`
+                ? `0 3px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.6)`
                 : 'none',
-              border: status === 'pending' ? '1px solid #4B5563' : `1px solid ${node.color}40`,
+              border: status === 'pending' ? '1.5px solid #4B5563' : `1.5px solid ${node.color}40`,
             }}
             animate={{ 
-              scale: status === 'active' || status === 'processing' ? [1, 1.3, 1] : 1,
+              scale: status === 'active' || status === 'processing' ? [1, 1.4, 1] : 1,
               boxShadow: status === 'active' || status === 'processing'
                 ? [
-                    `0 0 15px ${node.color}, 0 0 30px ${node.color}90, 0 0 45px ${node.color}60, inset 0 2px 4px rgba(255,255,255,0.4)`,
-                    `0 0 25px ${node.color}, 0 0 50px ${node.color}CC, 0 0 75px ${node.color}80, inset 0 2px 4px rgba(255,255,255,0.5)`,
-                    `0 0 15px ${node.color}, 0 0 30px ${node.color}90, 0 0 45px ${node.color}60, inset 0 2px 4px rgba(255,255,255,0.4)`,
+                    `0 0 20px ${node.color}, 0 0 40px ${node.color}90, 0 0 60px ${node.color}60, inset 0 3px 6px rgba(255,255,255,0.5)`,
+                    `0 0 32px ${node.color}, 0 0 64px ${node.color}CC, 0 0 96px ${node.color}80, inset 0 3px 6px rgba(255,255,255,0.6)`,
+                    `0 0 20px ${node.color}, 0 0 40px ${node.color}90, 0 0 60px ${node.color}60, inset 0 3px 6px rgba(255,255,255,0.5)`,
                   ]
                 : undefined,
             }}

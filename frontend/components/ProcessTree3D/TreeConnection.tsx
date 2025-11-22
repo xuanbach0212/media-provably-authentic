@@ -12,9 +12,9 @@ interface TreeConnectionProps {
 }
 
 export default function TreeConnectionLine({ connection, fromNode, toNode, active, completed }: TreeConnectionProps) {
-  // Node center positions - adjusted for node size (16px = 4 tailwind units) and padding (40px)
-  // Nodes are rendered with paddingTop: 40px and node size is w-4 h-4 (16px)
-  const nodeOffsetY = 40 + 8; // paddingTop + half of node height (16/2 = 8)
+  // Node center positions - adjusted for node size (24px = 6 tailwind units) and padding (30px)
+  // Nodes are rendered with paddingTop: 30px and node size is w-6 h-6 (24px)
+  const nodeOffsetY = 30 + 12; // paddingTop + half of node height (24/2 = 12)
   
   const fromX = fromNode.position.x;
   const fromY = fromNode.position.y + nodeOffsetY;
@@ -58,26 +58,26 @@ export default function TreeConnectionLine({ connection, fromNode, toNode, activ
 
   return (
     <g>
-      {/* Base path (static) - Always visible, even when pending */}
+      {/* Base path (static) - Always visible, even when pending, THICKER */}
       <path
         d={path}
         fill="none"
         stroke={completed ? '#22C55E40' : active ? '#6366F140' : '#37415180'}
-        strokeWidth="1"
-        opacity={completed ? 0.3 : active ? 0.4 : 0.15}
+        strokeWidth="2"
+        opacity={completed ? 0.4 : active ? 0.5 : 0.2}
       />
 
-      {/* Animated path (active) - thinner */}
+      {/* Animated path (active) - THICKER */}
       {(active || completed) && (
         <motion.path
           d={path}
           fill="none"
           stroke={color}
-          strokeWidth="1.5"
+          strokeWidth="3"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ 
             pathLength: 1, 
-            opacity: completed ? 0.6 : 0.8 
+            opacity: completed ? 0.8 : 1 
           }}
           transition={{ 
             duration: 0.6, 
@@ -86,18 +86,18 @@ export default function TreeConnectionLine({ connection, fromNode, toNode, activ
         />
       )}
 
-      {/* Glow effect for active connections - subtle */}
+      {/* Glow effect for active connections - MORE PROMINENT */}
       {active && !completed && (
         <motion.path
           d={path}
           fill="none"
           stroke={color}
-          strokeWidth="3"
-          opacity="0.2"
+          strokeWidth="6"
+          opacity="0.3"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 0.6, ease: 'easeInOut' }}
-          style={{ filter: 'blur(2px)' }}
+          style={{ filter: 'blur(4px)' }}
         />
       )}
 
