@@ -88,7 +88,23 @@ export class NautilusService {
       });
 
       console.log('[Nautilus] ✓ Attestation document received');
-      return response.data;
+      
+      // Enclave returns: { attestation: "...", pk: "..." }
+      // We need to parse PCRs from the attestation document
+      const attestationDocument = response.data.attestation;
+      const publicKey = response.data.pk || response.data.public_key;
+      
+      // For now, return basic structure
+      // TODO: Parse CBOR attestation document to extract PCRs
+      return {
+        attestationDocument,
+        publicKey,
+        pcrs: {
+          PCR0: 'extracted_from_attestation_document',
+          PCR1: 'extracted_from_attestation_document',
+          PCR2: 'extracted_from_attestation_document',
+        },
+      };
     } catch (error: any) {
       console.error('[Nautilus] Failed to get attestation:', error.message);
       throw new Error(`Nautilus attestation failed: ${error.message}`);
@@ -106,6 +122,7 @@ export class NautilusService {
     signature: string;
     attestationDocument?: string;
     publicKey?: string;
+    pcrs?: Record<string, string>;
   }> {
     const dataHash = this.computeHash(reportData);
 
@@ -119,11 +136,14 @@ export class NautilusService {
       console.log(`[Nautilus] Requesting enclave to sign report...`);
 
       // Call Nautilus enclave to process and sign data
+      // Enclave expects: { payload: { media_hash, metadata } }
       const response = await axios.post(
         `${this.apiUrl}/process_data`,
         {
-          data: dataHash,
-          timestamp: Date.now(),
+          payload: {
+            media_hash: dataHash,
+            metadata: `Verification report for ${this.enclaveId} at ${new Date().toISOString()}`,
+          }
         },
         {
           headers: {
@@ -133,14 +153,33 @@ export class NautilusService {
         }
       );
 
-      const { signature, attestation_document, public_key } = response.data;
+      // Enclave returns: { response: {...}, signature: "..." }
+      const { signature } = response.data;
       
       console.log(`[Nautilus] ✓ Report signed by enclave ${this.enclaveId}`);
+      console.log(`[Nautilus] Signature: ${signature.substring(0, 32)}...`);
+      
+      // Fetch full attestation document with PCRs
+      let attestationDocument: string | undefined;
+      let publicKey: string | undefined;
+      let pcrs: Record<string, string> | undefined;
+      
+      try {
+        console.log('[Nautilus] Fetching attestation document...');
+        const attestation = await this.getAttestation();
+        attestationDocument = attestation.attestationDocument;
+        publicKey = attestation.publicKey;
+        pcrs = attestation.pcrs;
+        console.log('[Nautilus] ✓ Attestation document received');
+      } catch (attestError: any) {
+        console.warn('[Nautilus] Could not fetch attestation document:', attestError.message);
+      }
       
       return {
         signature,
-        attestationDocument: attestation_document,
-        publicKey: public_key,
+        attestationDocument,
+        publicKey,
+        pcrs,
       };
     } catch (error: any) {
       console.error('[Nautilus] Enclave signing failed:', error.message);

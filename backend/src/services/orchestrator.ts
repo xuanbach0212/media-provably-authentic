@@ -97,6 +97,7 @@ export class OrchestrationService {
       signature: string;
       attestationDocument?: string;
       publicKey?: string;
+      pcrs?: Record<string, string>;
     };
     
     try {
@@ -114,6 +115,7 @@ export class OrchestrationService {
       mrenclave: this.nautilus.getEnclaveInfo().mrenclave,
       attestationDocument: attestationResult.attestationDocument,
       publicKey: attestationResult.publicKey,
+      pcrs: attestationResult.pcrs,
     };
 
     // NOTE: Walrus storage and blockchain submission now handled by Aggregator
