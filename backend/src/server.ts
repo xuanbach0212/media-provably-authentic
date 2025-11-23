@@ -12,6 +12,7 @@ import { startBullProcessor, stopBullProcessor } from "./queue/bullProcessor";
 import { startMultiWorkerProcessor, stopMultiWorkerProcessor } from "./queue/multiWorkerProcessor";
 import uploadRoutes from "./routes/upload";
 import verifyRoutes from "./routes/verify";
+import verifyAttestationRoutes from "./routes/verifyAttestation";
 import disputeRoutes from "./routes/dispute";
 import retryRoutes from "./routes/retry";
 import { SocketManager } from "./services/socketManager";
@@ -86,6 +87,7 @@ app.get("/health", (req, res) => {
 // Routes
 app.use("/api", uploadRoutes);
 app.use("/api", verifyRoutes);
+app.use("/api", verifyAttestationRoutes);
 app.use("/api", retryRoutes);
 app.use("/api/dispute", disputeRoutes);
 

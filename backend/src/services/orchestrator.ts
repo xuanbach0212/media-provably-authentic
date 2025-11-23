@@ -93,20 +93,27 @@ export class OrchestrationService {
     };
 
     // 6. Sign the report with Nautilus TEE enclave
-    let enclaveSignature: string;
+    let attestationResult: {
+      signature: string;
+      attestationDocument?: string;
+      publicKey?: string;
+    };
+    
     try {
-      enclaveSignature = await this.nautilus.generateAttestation(report);
-      console.log("[Orchestrator] ✓ Report signed by Nautilus");
+      attestationResult = await this.nautilus.generateAttestation(report);
+      console.log(`[Orchestrator] ✓ Report signed by Nautilus enclave ${this.enclaveId}`);
     } catch (error: any) {
       console.error("[Orchestrator] Nautilus signing failed:", error.message);
       throw error;
     }
     
     report.enclaveAttestation = {
-      signature: enclaveSignature,
+      signature: attestationResult.signature,
       enclaveId: this.enclaveId,
       timestamp: new Date().toISOString(),
       mrenclave: this.nautilus.getEnclaveInfo().mrenclave,
+      attestationDocument: attestationResult.attestationDocument,
+      publicKey: attestationResult.publicKey,
     };
 
     // NOTE: Walrus storage and blockchain submission now handled by Aggregator

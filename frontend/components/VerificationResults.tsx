@@ -265,6 +265,49 @@ export default function VerificationResults({ report }: VerificationResultsProps
             <p><strong>Walrus Report CID:</strong> <a href={`https://walrus.com/cid/${report.blockchainAttestation.reportCID}`} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all">{report.blockchainAttestation.reportCID}</a></p>
             <p><strong>Enclave ID:</strong> <span className="font-mono">{report.blockchainAttestation.enclaveId}</span></p>
             <p><strong>Attested At:</strong> {new Date(report.blockchainAttestation.timestamp).toLocaleString()}</p>
+            
+            {/* TEE Attestation Details */}
+            {report.enclaveAttestation?.attestationDocument && (
+              <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-cyan-500/30">
+                <h4 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+                  🔒 TEE Attestation Proof
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-col">
+                    <span className="text-gray-400 mb-1">Enclave ID:</span>
+                    <span className="text-white font-mono bg-gray-900/50 px-2 py-1 rounded">
+                      {report.enclaveAttestation.enclaveId}
+                    </span>
+                  </div>
+                  {report.enclaveAttestation.publicKey && (
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 mb-1">Public Key:</span>
+                      <span className="text-white font-mono text-[10px] bg-gray-900/50 px-2 py-1 rounded break-all">
+                        {report.enclaveAttestation.publicKey.substring(0, 64)}...
+                      </span>
+                    </div>
+                  )}
+                  {report.enclaveAttestation.pcrs && report.enclaveAttestation.pcrs.PCR0 && (
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 mb-1">PCR0 (Platform Configuration):</span>
+                      <span className="text-white font-mono text-[10px] bg-gray-900/50 px-2 py-1 rounded break-all">
+                        {report.enclaveAttestation.pcrs.PCR0.substring(0, 64)}...
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-3 pt-3 border-t border-gray-700">
+                    <a
+                      href="https://docs.sui.io/concepts/cryptography/nautilus"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 text-xs inline-flex items-center gap-1"
+                    >
+                      Learn about Nautilus TEE →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {expandedSections.blockchain && !report.blockchainAttestation && (
