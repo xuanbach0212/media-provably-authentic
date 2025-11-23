@@ -251,7 +251,7 @@ resource "aws_launch_template" "nitro_enclave" {
     }
   }
 
-  user_data = base64encode(templatefile("${path.module}/scripts/setup-enclave.sh", {
+  user_data = base64encode(templatefile("${path.module}/scripts/setup-nautilus-proper.sh", {
     enclave_memory_mb = var.enclave_memory_mb
     enclave_cpu_count = var.enclave_cpu_count
   }))
@@ -272,47 +272,59 @@ resource "aws_launch_template" "nitro_enclave" {
   }
 }
 
-# Spot Instance Request
-resource "aws_spot_instance_request" "nitro_enclave" {
-  count = var.use_spot_instance ? 1 : 0
-
-  spot_price           = var.spot_max_price
-  wait_for_fulfillment = true
-  spot_type            = "persistent"
-
-  launch_template {
-    id      = aws_launch_template.nitro_enclave.id
-    version = "$Latest"
-  }
-
-  subnet_id = aws_subnet.public.id
-
-  tags = {
-    Name = "${var.project_name}-nitro-enclave-spot"
-  }
-}
-
-# On-Demand Instance (fallback)
+# EC2 Instance with Spot Market Options
 resource "aws_instance" "nitro_enclave" {
-  count = var.use_spot_instance ? 0 : 1
+  ami                         = data.aws_ami.amazon_linux_2.id
+  instance_type               = var.instance_type
+  key_name                    = aws_key_pair.deployer.key_name
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.nitro_enclave.id]
+  iam_instance_profile        = aws_iam_instance_profile.nitro_enclave.name
+  associate_public_ip_address = true
 
-  launch_template {
-    id      = aws_launch_template.nitro_enclave.id
-    version = "$Latest"
+  enclave_options {
+    enabled = true
   }
 
-  subnet_id = aws_subnet.public.id
-
-  tags = {
-    Name = "${var.project_name}-nitro-enclave"
+  dynamic "instance_market_options" {
+    for_each = var.use_spot_instance ? [1] : []
+    content {
+      market_type = "spot"
+      spot_options {
+        max_price                      = var.spot_max_price
+        spot_instance_type             = "persistent"
+        instance_interruption_behavior = "stop"
+      }
+    }
   }
+
+  user_data = base64encode(templatefile("${path.module}/scripts/setup-nautilus-proper.sh", {
+    enclave_memory_mb = var.enclave_memory_mb
+    enclave_cpu_count = var.enclave_cpu_count
+  }))
+
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 30
+    delete_on_termination = true
+    encrypted             = true
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.project_name}-nitro-enclave${var.use_spot_instance ? "-spot" : ""}"
+      Environment = var.environment
+      Type        = "enclave-worker"
+    }
+  )
 }
 
 # Elastic IP (optional, for stable endpoint)
 resource "aws_eip" "nitro_enclave" {
   count    = var.allocate_elastic_ip ? 1 : 0
   domain   = "vpc"
-  instance = var.use_spot_instance ? aws_spot_instance_request.nitro_enclave[0].spot_instance_id : aws_instance.nitro_enclave[0].id
+  instance = aws_instance.nitro_enclave.id
 
   tags = {
     Name = "${var.project_name}-nitro-enclave-eip"

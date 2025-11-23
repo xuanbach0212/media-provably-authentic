@@ -68,8 +68,8 @@ export default function SimplifiedProgress({ currentStage, substep, progress, st
   const oracleProgress = getOracleProgress();
 
   const totalSteps = 5;
-  const completedSteps = currentStage > 0 ? currentStage - 1 : 0;
-  const progressPercent = Math.round((completedSteps / totalSteps) * 100);
+  // Use progress from backend if available, otherwise calculate from stage
+  const progressPercent = progress > 0 ? progress : Math.round(((currentStage > 0 ? currentStage - 1 : 0) / totalSteps) * 100);
 
   return (
     <div className="w-full">
@@ -84,30 +84,48 @@ export default function SimplifiedProgress({ currentStage, substep, progress, st
           </div>
         </div>
 
-        {/* Stages Progress */}
-        <div className="flex gap-2">
+        {/* Single Progress Bar with Stage Icons */}
+        <div className="mb-4">
+          <div className="h-3 bg-gray-700 rounded-full overflow-hidden relative">
+            <motion.div
+              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-green-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              style={{
+                boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Stage Icons */}
+        <div className="flex justify-between px-2">
           {STAGES.map((stage) => {
             const stageStatus = getStageStatus(stage.id);
             return (
               <div
                 key={stage.id}
-                className="flex-1"
+                className="flex flex-col items-center"
               >
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    stageStatus === 'completed'
-                      ? 'bg-green-500'
-                      : stageStatus === 'active'
-                      ? 'bg-blue-500 animate-pulse'
-                      : 'bg-gray-700'
+                <div 
+                  className={`text-2xl transition-all duration-300 ${
+                    stageStatus === 'completed' ? 'opacity-100 scale-110' :
+                    stageStatus === 'active' ? 'opacity-100 scale-125 animate-pulse' :
+                    'opacity-40 scale-100'
                   }`}
                   style={{
-                    boxShadow: stageStatus === 'active' ? `0 0 10px ${stage.color}80` : 'none',
+                    filter: stageStatus === 'active' ? `drop-shadow(0 0 8px ${stage.color})` : 'none',
                   }}
-                />
-                <div className="mt-2 text-center">
-                  <div className="text-lg">{stage.icon}</div>
-                  <div className="text-xs text-gray-400 mt-1">{stage.name}</div>
+                >
+                  {stage.icon}
+                </div>
+                <div className={`text-xs mt-1 transition-all duration-300 ${
+                  stageStatus === 'completed' ? 'text-green-400 font-semibold' :
+                  stageStatus === 'active' ? 'text-blue-400 font-semibold' :
+                  'text-gray-500'
+                }`}>
+                  {stage.name}
                 </div>
               </div>
             );

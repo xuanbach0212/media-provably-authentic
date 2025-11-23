@@ -77,23 +77,53 @@ export class SocketClient {
   }
 
   /**
+   * Update authentication for existing connection
+   */
+  updateAuth(walletAddress: string, signature?: string): void {
+    if (!this.socket) {
+      console.warn('[SocketClient] Not connected, cannot update auth');
+      return;
+    }
+
+    console.log('[SocketClient] 🔄 Updating auth with wallet:', walletAddress);
+    
+    // Disconnect and reconnect with new auth
+    this.disconnect();
+    this.connect(walletAddress, signature);
+  }
+
+  /**
    * Subscribe to a specific job's updates
    */
   subscribeToJob(jobId: string, callbacks: SocketCallbacks): void {
     if (!this.socket) {
-      console.error('[SocketClient] Not connected. Call connect() first.');
+      console.error('[SocketClient] ❌ Not connected. Call connect() first.');
       return;
     }
 
-    console.log('[SocketClient] Subscribing to job:', jobId);
+    console.log('[SocketClient] 📡 Subscribing to job:', jobId);
+    console.log('[SocketClient] Socket connected:', this.socket.connected);
+    console.log('[SocketClient] Socket ID:', this.socket.id);
 
     // Join job room
     this.socket.emit('subscribe', jobId);
+    console.log('[SocketClient] ✅ Emitted subscribe event for room: job:' + jobId);
 
-    // Register callbacks
-    this.socket.on('progress', callbacks.onProgress);
-    this.socket.on('error', callbacks.onError);
-    this.socket.on('complete', callbacks.onComplete);
+    // Register callbacks with logging wrappers
+    this.socket.on('progress', (data) => {
+      console.log('[SocketClient] 📊 Received progress event:', data);
+      callbacks.onProgress(data);
+    });
+    this.socket.on('error', (data) => {
+      console.error('[SocketClient] ❌ Received error event:', data);
+      callbacks.onError(data);
+    });
+    this.socket.on('complete', (data) => {
+      console.log('[SocketClient] ✅ Received complete event:', data);
+      callbacks.onComplete(data);
+    });
+    
+    console.log('[SocketClient] ✅ Callbacks registered for progress, error, complete');
   }
 
   /**
@@ -128,4 +158,7 @@ export class SocketClient {
     return this.socket?.connected || false;
   }
 }
+
+// Export singleton instance
+export const socketClient = new SocketClient();
 

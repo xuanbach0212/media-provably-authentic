@@ -27,8 +27,9 @@ sudo amazon-linux-extras install aws-nitro-enclaves-cli -y
 sudo yum install aws-nitro-enclaves-cli-devel -y
 
 # Install Node.js (for enclave application)
-echo "📦 Installing Node.js..."
-curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+# Using Node 16 for Amazon Linux 2 compatibility (GLIBC 2.26)
+echo "📦 Installing Node.js 16..."
+curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
 sudo yum install -y nodejs
 
 # Start Docker
@@ -203,8 +204,8 @@ EOF
 cat > /opt/nautilus/Dockerfile <<'EOF'
 FROM amazonlinux:2
 
-# Install Node.js
-RUN curl -fsSL https://rpm.nodesource.com/setup_18.x | bash - && \
+# Install Node.js 16 (compatible with Amazon Linux 2 GLIBC 2.26)
+RUN curl -fsSL https://rpm.nodesource.com/setup_16.x | bash - && \
     yum install -y nodejs && \
     yum clean all
 

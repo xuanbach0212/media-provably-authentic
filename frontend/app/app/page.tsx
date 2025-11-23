@@ -9,10 +9,11 @@ import { WalletConnect } from '@/components/WalletConnect';
 import { successConfetti } from '@/lib/confetti';
 import { ErrorUpdate, ProgressUpdate, SocketClient } from '@/lib/socket';
 import { DESIGN_TOKENS } from '@/styles/design-system';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const account = useCurrentAccount();
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<'IDLE' | 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'ERROR'>('IDLE');
   const [error, setError] = useState<string | null>(null);
@@ -27,56 +28,75 @@ export default function Home() {
     filename: string;
     fileSize: number;
     fileType: string;
+    file?: File; // Store original File object
   } | null>(null);
 
   // Socket management
   const [socketClient] = useState(() => new SocketClient());
 
   useEffect(() => {
-    console.log('[Page] Connecting socket early...');
-    socketClient.connect();
+    console.log('[Page] Connecting socket with wallet:', account?.address || 'anonymous');
+    socketClient.connect(account?.address, undefined);
 
     return () => {
       socketClient.disconnect();
     };
-  }, [socketClient]);
+  }, [socketClient, account?.address]);
 
   const handleUploadStart = () => {
-    console.log('[Page] Upload started');
+    console.log('[Page] 📤 Upload started');
     setStatus('UPLOADING');
     setCurrentStage(1);
     setSubstep('Preparing media...');
+    setProgress(5); // Set initial progress
   };
 
-  const handleUploadComplete = (uploadJobId: string, walletAddress?: string, signature?: string) => {
+  const handleUploadComplete = (uploadJobId: string, walletAddress?: string, signature?: string, initialProgress?: any) => {
     console.log('[Page] Upload complete, jobId:', uploadJobId);
     setJobId(uploadJobId);
     setStatus('PROCESSING');
-    setCurrentStage(2);
-
-    if (walletAddress && signature) {
-      socketClient.subscribeToJob(uploadJobId, walletAddress, signature);
+    
+    // Update with initial progress from upload response
+    if (initialProgress) {
+      setCurrentStage(initialProgress.stage || 2);
+      setSubstep(initialProgress.substep || 'Processing...');
+      setProgress(initialProgress.progress || 20);
     } else {
-      socketClient.subscribeToJob(uploadJobId);
+      setCurrentStage(2);
     }
+
+    // Subscribe to job updates with callbacks
+    socketClient.subscribeToJob(uploadJobId, {
+      onProgress: handleProgressUpdate,
+      onComplete: handleAnalysisComplete,
+      onError: handleAnalysisError,
+    });
   };
 
   const handleProgressUpdate = (update: ProgressUpdate) => {
-    console.log('[Page] Progress update:', update);
+    console.log('[Page] 📊 Progress update:', {
+      stage: update.stage,
+      stageName: update.stageName,
+      substep: update.substep,
+      progress: update.progress,
+      timestamp: update.timestamp,
+    });
     setCurrentStage(update.stage);
     setSubstep(update.substep);
     setProgress(update.progress);
   };
 
   const handleAnalysisComplete = (report: any) => {
-    console.log('[Page] Analysis complete:', report);
+    console.log('[Page] ✅ Analysis complete:', report);
     setStatus('COMPLETED');
+    setProgress(100);
+    setCurrentStage(5);
     setFinalReport(report);
     successConfetti();
   };
 
   const handleAnalysisError = (errorUpdate: ErrorUpdate) => {
-    console.error('[Page] Analysis error:', errorUpdate);
+    console.error('[Page] ❌ Analysis error:', errorUpdate);
     setStatus('ERROR');
     setError(errorUpdate.message);
   };
@@ -92,7 +112,7 @@ export default function Home() {
     setUploadedFile(null);
   };
 
-  const handleFileSelected = (fileInfo: { preview: string; filename: string; fileSize: number; fileType: string }) => {
+  const handleFileSelected = (fileInfo: { preview: string; filename: string; fileSize: number; fileType: string; file?: File }) => {
     setUploadedFile(fileInfo);
   };
 
@@ -123,18 +143,15 @@ export default function Home() {
           </div>
         </ConsistentCard>
 
-        {/* Upload Card - Hero Section (Hide when processing/completed) */}
-        <AnimatePresence>
-          {status === 'IDLE' && (
-            <motion.div
-              initial={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ConsistentCard accentColor={DESIGN_TOKENS.colors.accents.cyan}>
-                <SectionHeader accentColor={DESIGN_TOKENS.colors.accents.cyan} icon="📤">
-                  Upload Media for Verification
-                </SectionHeader>
+        {/* Split View Card - ALWAYS show when IDLE */}
+        {status === 'IDLE' && (
+          <ConsistentCard accentColor={DESIGN_TOKENS.colors.accents.indigo}>
+            <SectionHeader accentColor={DESIGN_TOKENS.colors.accents.indigo} icon="🔄">
+              Verification Pipeline
+            </SectionHeader>
+            <div className="flex items-start gap-6">
+              {/* Left Side: Upload Zone (always visible, but MediaUploader manages its own display) */}
+              <div className={uploadedFile ? "flex-shrink-0" : "flex-1"}>
                 <MediaUploader
                   onUploadComplete={handleUploadComplete}
                   onProgressUpdate={handleProgressUpdate}
@@ -143,10 +160,20 @@ export default function Home() {
                   onUploadStart={handleUploadStart}
                   onFileSelected={handleFileSelected}
                 />
-              </ConsistentCard>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+              
+              {/* Right Side: Tree */}
+              <div className="flex-1">
+                <SimplifiedProgress
+                  currentStage={0}
+                  substep={uploadedFile ? "Ready to start" : "Waiting for media..."}
+                  progress={0}
+                  status="IDLE"
+                />
+              </div>
+            </div>
+          </ConsistentCard>
+        )}
 
         {/* Compact Preview + Progress Card - Show when processing/completed */}
         {(status === 'PROCESSING' || status === 'UPLOADING' || status === 'COMPLETED') && uploadedFile && (

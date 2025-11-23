@@ -1,54 +1,30 @@
 output "instance_id" {
   description = "EC2 instance ID"
-  value = var.use_spot_instance ? (
-    length(aws_spot_instance_request.nitro_enclave) > 0 ? aws_spot_instance_request.nitro_enclave[0].spot_instance_id : null
-  ) : (
-    length(aws_instance.nitro_enclave) > 0 ? aws_instance.nitro_enclave[0].id : null
-  )
+  value       = aws_instance.nitro_enclave.id
 }
 
 output "instance_public_ip" {
   description = "Public IP address of the enclave instance"
   value = var.allocate_elastic_ip ? (
     length(aws_eip.nitro_enclave) > 0 ? aws_eip.nitro_enclave[0].public_ip : null
-  ) : (
-    var.use_spot_instance ? (
-      length(aws_spot_instance_request.nitro_enclave) > 0 ? aws_spot_instance_request.nitro_enclave[0].public_ip : null
-    ) : (
-      length(aws_instance.nitro_enclave) > 0 ? aws_instance.nitro_enclave[0].public_ip : null
-    )
-  )
+  ) : aws_instance.nitro_enclave.public_ip
 }
 
 output "instance_public_dns" {
   description = "Public DNS of the enclave instance"
-  value = var.use_spot_instance ? (
-    length(aws_spot_instance_request.nitro_enclave) > 0 ? aws_spot_instance_request.nitro_enclave[0].public_dns : null
-  ) : (
-    length(aws_instance.nitro_enclave) > 0 ? aws_instance.nitro_enclave[0].public_dns : null
-  )
+  value       = aws_instance.nitro_enclave.public_dns
 }
 
 output "ssh_command" {
   description = "SSH command to connect to instance"
-  value = var.use_spot_instance ? (
-    length(aws_spot_instance_request.nitro_enclave) > 0 ? "ssh -i ~/.ssh/nautilus-key ec2-user@${aws_spot_instance_request.nitro_enclave[0].public_ip}" : null
-  ) : (
-    length(aws_instance.nitro_enclave) > 0 ? "ssh -i ~/.ssh/nautilus-key ec2-user@${aws_instance.nitro_enclave[0].public_ip}" : null
-  )
+  value       = "ssh -i ~/.ssh/nautilus-key ec2-user@${aws_instance.nitro_enclave.public_ip}"
 }
 
 output "enclave_api_endpoint" {
   description = "Nautilus enclave API endpoint"
   value = var.allocate_elastic_ip ? (
     length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:5000" : null
-  ) : (
-    var.use_spot_instance ? (
-      length(aws_spot_instance_request.nitro_enclave) > 0 ? "http://${aws_spot_instance_request.nitro_enclave[0].public_ip}:5000" : null
-    ) : (
-      length(aws_instance.nitro_enclave) > 0 ? "http://${aws_instance.nitro_enclave[0].public_ip}:5000" : null
-    )
-  )
+  ) : "http://${aws_instance.nitro_enclave.public_ip}:5000"
 }
 
 output "security_group_id" {
@@ -75,13 +51,7 @@ output "env_variables" {
   value = {
     NAUTILUS_API_URL = var.allocate_elastic_ip ? (
       length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:5000" : null
-    ) : (
-      var.use_spot_instance ? (
-        length(aws_spot_instance_request.nitro_enclave) > 0 ? "http://${aws_spot_instance_request.nitro_enclave[0].public_ip}:5000" : null
-      ) : (
-        length(aws_instance.nitro_enclave) > 0 ? "http://${aws_instance.nitro_enclave[0].public_ip}:5000" : null
-      )
-    )
+    ) : "http://${aws_instance.nitro_enclave.public_ip}:5000"
     USE_REAL_NAUTILUS = "true"
     ENCLAVE_ID        = "nitro_enclave_1"
   }
@@ -97,11 +67,7 @@ output "next_steps" {
   📋 Next steps:
 
   1. SSH into instance:
-     ${var.use_spot_instance ? (
-       length(aws_spot_instance_request.nitro_enclave) > 0 ? "ssh -i ~/.ssh/nautilus-key ec2-user@${aws_spot_instance_request.nitro_enclave[0].public_ip}" : "Instance not yet provisioned"
-     ) : (
-       length(aws_instance.nitro_enclave) > 0 ? "ssh -i ~/.ssh/nautilus-key ec2-user@${aws_instance.nitro_enclave[0].public_ip}" : "Instance not yet provisioned"
-     )}
+     ssh -i ~/.ssh/nautilus-key ec2-user@${aws_instance.nitro_enclave.public_ip}
 
   2. Check enclave status:
      nitro-cli describe-enclaves
@@ -112,34 +78,18 @@ output "next_steps" {
 
   4. Update backend .env:
      NAUTILUS_API_URL=${var.allocate_elastic_ip ? (
-       length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:5000" : "pending"
-     ) : (
-       var.use_spot_instance ? (
-         length(aws_spot_instance_request.nitro_enclave) > 0 ? "http://${aws_spot_instance_request.nitro_enclave[0].public_ip}:5000" : "pending"
-       ) : (
-         length(aws_instance.nitro_enclave) > 0 ? "http://${aws_instance.nitro_enclave[0].public_ip}:5000" : "pending"
-       )
-     )}
+       length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:5000" : "http://${aws_instance.nitro_enclave.public_ip}:5000"
+     ) : "http://${aws_instance.nitro_enclave.public_ip}:5000"}
      USE_REAL_NAUTILUS=true
 
   5. Test connection:
      curl ${var.allocate_elastic_ip ? (
-       length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:8080/health" : "pending"
-     ) : (
-       var.use_spot_instance ? (
-         length(aws_spot_instance_request.nitro_enclave) > 0 ? "http://${aws_spot_instance_request.nitro_enclave[0].public_ip}:8080/health" : "pending"
-       ) : (
-         length(aws_instance.nitro_enclave) > 0 ? "http://${aws_instance.nitro_enclave[0].public_ip}:8080/health" : "pending"
-       )
-     )}
+       length(aws_eip.nitro_enclave) > 0 ? "http://${aws_eip.nitro_enclave[0].public_ip}:8080/health" : "http://${aws_instance.nitro_enclave.public_ip}:8080/health"
+     ) : "http://${aws_instance.nitro_enclave.public_ip}:8080/health"}
 
   💰 Estimated cost: ${var.use_spot_instance ? "$25-40/month" : "$120-150/month"}
 
   🛑 To stop instance (save cost):
-     aws ec2 stop-instances --instance-ids ${var.use_spot_instance ? (
-       length(aws_spot_instance_request.nitro_enclave) > 0 ? aws_spot_instance_request.nitro_enclave[0].spot_instance_id : "pending"
-     ) : (
-       length(aws_instance.nitro_enclave) > 0 ? aws_instance.nitro_enclave[0].id : "pending"
-     )}
+     aws ec2 stop-instances --instance-ids ${aws_instance.nitro_enclave.id}
   EOT
 }

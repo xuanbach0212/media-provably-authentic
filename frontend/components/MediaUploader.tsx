@@ -10,7 +10,7 @@ interface MediaUploaderProps {
   onAnalysisComplete?: (report: any) => void;
   onAnalysisError?: (error: any) => void;
   onUploadStart?: () => void;
-  onFileSelected?: (fileInfo: { preview: string; filename: string; fileSize: number; fileType: string }) => void;
+  onFileSelected?: (fileInfo: { preview: string; filename: string; fileSize: number; fileType: string; file?: File }) => void;
 }
 
 export default function MediaUploader({ 
@@ -22,7 +22,7 @@ export default function MediaUploader({
   onFileSelected
 }: MediaUploaderProps) {
   const account = useCurrentAccount();
-  const { mutate: signMessage } = useSignPersonalMessage();
+  const { mutateAsync: signMessageAsync } = useSignPersonalMessage();
   
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -86,6 +86,7 @@ export default function MediaUploader({
           filename: file.name,
           fileSize: file.size,
           fileType: file.type,
+          file: file, // Pass original File object
         });
       }
     };
@@ -94,8 +95,6 @@ export default function MediaUploader({
 
   const handleUpload = async () => {
     if (!file) return;
-
-    // Check wallet connection
     if (!account) {
       setError('Please connect your wallet first');
       return;
@@ -104,48 +103,41 @@ export default function MediaUploader({
     setUploading(true);
     setError(null);
     
-    // Notify parent that upload is starting
     if (onUploadStart) {
       onUploadStart();
     }
 
     try {
-      // Sign message with wallet
       const message = `Upload media for verification: ${file.name} (${new Date().toISOString()})`;
       const messageBytes = new TextEncoder().encode(message);
 
-      signMessage(
-        { message: messageBytes },
-        {
-          onSuccess: async (result) => {
-            try {
-              console.log('[MediaUploader] Message signed successfully');
-              
-              // Upload with signature
-              const response = await ApiClient.uploadMedia(
-                file,
-                account.address,
-                result.signature
-              );
-              
-              console.log('[MediaUploader] Upload successful:', response);
-              onUploadComplete(response.jobId, account.address, result.signature, response.progress);
-            } catch (err: any) {
-              setError(err.message || 'Upload failed');
-              console.error('[MediaUploader] Upload error:', err);
-              setUploading(false);
-            }
-          },
-          onError: (err) => {
-            setError('Failed to sign message: ' + err.message);
-            console.error('[MediaUploader] Signing error:', err);
-            setUploading(false);
-          },
-        }
+      console.log('[MediaUploader] 🔐 Requesting wallet signature...');
+      console.log('[MediaUploader] Wallet:', account.address);
+
+      // Use mutateAsync with timeout race
+      const signPromise = signMessageAsync({ message: messageBytes });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Wallet signing timeout after 30 seconds')), 30000);
+      });
+
+      const result = await Promise.race([signPromise, timeoutPromise]);
+      
+      console.log('[MediaUploader] ✅ Signature received:', result.signature);
+
+      // Upload with signature
+      console.log('[MediaUploader] 📤 Uploading to backend...');
+      const response = await ApiClient.uploadMedia(
+        file,
+        account.address,
+        result.signature
       );
+      
+      console.log('[MediaUploader] ✅ Upload successful:', response);
+      onUploadComplete(response.jobId, account.address, result.signature, response.progress);
+      
     } catch (err: any) {
       setError(err.message || 'Upload failed');
-      console.error('[MediaUploader] Upload error:', err);
+      console.error('[MediaUploader] ❌ Error:', err);
       setUploading(false);
     }
   };
@@ -211,35 +203,46 @@ export default function MediaUploader({
           </label>
         ) : (
           <div className="space-y-3">
-            {file?.type.startsWith('image/') && (
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-48 mx-auto rounded-lg border-2 border-[#22C55E]/50"
-              />
-            )}
-            {file?.type.startsWith('video/') && (
-              <video
-                src={preview}
-                className="max-h-48 mx-auto rounded-lg border-2 border-[#22C55E]/50"
-                controls
-              />
-            )}
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="text-white font-medium">{file?.name}</span>
-              <span className="text-gray-500">•</span>
-              <span className="text-[#4DA2FF]">{(file!.size / 1024 / 1024).toFixed(2)} MB</span>
+            {/* Compact Preview */}
+            <div className="relative w-32 h-32 mx-auto rounded-lg overflow-hidden border-2 border-[#22C55E]/50">
+              {file?.type.startsWith('image/') && (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+              )}
+              {file?.type.startsWith('video/') && (
+                <video
+                  src={preview}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              <button
+                onClick={() => {
+                  setFile(null);
+                  setPreview(null);
+                }}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 flex items-center justify-center transition-colors text-white text-xs"
+                disabled={uploading}
+              >
+                ✕
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setFile(null);
-                setPreview(null);
-              }}
-              className="text-xs text-red-400 hover:text-red-300 transition-colors"
-              disabled={uploading}
-            >
-              ✕ Remove
-            </button>
+            <div className="text-center text-xs">
+              <p className="text-white font-medium truncate">{file?.name}</p>
+              <p className="text-gray-400">{(file!.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+
+            {/* Sign & Verify Button */}
+            {file && !uploading && account && (
+              <button
+                onClick={handleUpload}
+                className="w-full bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] hover:from-[#6FBCFF] hover:to-[#14B8A6] text-white py-2.5 px-4 rounded-lg font-semibold text-sm shadow-lg transform hover:scale-[1.02] transition-all"
+              >
+                🔐 Sign & Verify Authenticity
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -254,15 +257,6 @@ export default function MediaUploader({
         <div className="mt-3 p-2.5 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-xs text-center">
           ⚠️ Connect your Sui wallet to verify media authenticity
         </div>
-      )}
-
-      {file && !uploading && account && (
-        <button
-          onClick={handleUpload}
-          className="mt-3 w-full bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] hover:from-[#6FBCFF] hover:to-[#14B8A6] text-white py-2.5 px-4 rounded-lg font-semibold text-sm shadow-lg transform hover:scale-[1.02] transition-all"
-        >
-          🔐 Sign & Verify Authenticity
-        </button>
       )}
 
       {uploading && (

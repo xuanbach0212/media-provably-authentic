@@ -46,22 +46,27 @@ io.use((socket, next) => {
 
 // Socket.IO connection handler
 io.on("connection", (socket) => {
-  console.log(`[Socket.IO] Client connected: ${socket.id}`);
+  const walletAddress = socket.handshake.auth.walletAddress || 'anonymous';
+  console.log(`[Socket.IO] Client connected: ${socket.id} | Wallet: ${walletAddress}`);
 
   // Handle job subscription
   socket.on("subscribe", (jobId: string) => {
     socket.join(`job:${jobId}`);
-    console.log(`[Socket.IO] Socket ${socket.id} subscribed to job: ${jobId}`);
+    console.log(`[Socket.IO] Socket ${socket.id} (${walletAddress}) subscribed to job: ${jobId}`);
+    
+    // Log room subscribers count
+    const subscribersCount = SocketManager.getJobSubscribersCount(jobId);
+    console.log(`[Socket.IO] Job ${jobId} now has ${subscribersCount} subscriber(s)`);
   });
 
   // Handle job unsubscription
   socket.on("unsubscribe", (jobId: string) => {
     socket.leave(`job:${jobId}`);
-    console.log(`[Socket.IO] Socket ${socket.id} unsubscribed from job: ${jobId}`);
+    console.log(`[Socket.IO] Socket ${socket.id} (${walletAddress}) unsubscribed from job: ${jobId}`);
   });
 
   socket.on("disconnect", () => {
-    console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
+    console.log(`[Socket.IO] Client disconnected: ${socket.id} | Wallet: ${walletAddress}`);
   });
 });
 
