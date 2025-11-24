@@ -7,6 +7,7 @@ import EnsembleGauge from './charts/EnsembleGauge';
 import ModelScoresBar from './charts/ModelScoresBar';
 import FileInfoCard from './FileInfoCard';
 import Card3D from './Card3D';
+import TransactionHistory from './TransactionHistory';
 import { staggerContainer, cardEntrance, itemVariants, expandCollapse, iconRotate } from '@/lib/animations';
 import { blockchainConfetti } from '@/lib/confetti';
 
@@ -96,6 +97,9 @@ export default function VerificationResults({ report }: VerificationResultsProps
 
       {/* Ensemble Score Gauge */}
       <EnsembleGauge score={ensembleScore} />
+
+      {/* Transaction History */}
+      <TransactionHistory report={report} />
 
       {/* File Information Card */}
       {analysisData?.forensicAnalysis && (
