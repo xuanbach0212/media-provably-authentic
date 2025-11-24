@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { FaExternalLinkAlt, FaCheck, FaClock, FaLock, FaDatabase, FaShieldAlt } from 'react-icons/fa';
 import { useState } from 'react';
+import { getSuiTxUrlAuto, getWalrusBlobUrlAuto } from '@/lib/explorers';
 
 interface Transaction {
   step: number;
@@ -154,13 +155,6 @@ export default function TransactionHistory({ report }: TransactionHistoryProps) 
     });
   };
 
-  const getSuiExplorerUrl = (txHash: string) => {
-    return `https://suiscan.xyz/testnet/tx/${txHash}`;
-  };
-
-  const getWalrusExplorerUrl = (cid: string) => {
-    return `https://walrus-testnet-explorer.sui.io/blob/${cid}`;
-  };
 
   return (
     <motion.div
@@ -216,11 +210,12 @@ export default function TransactionHistory({ report }: TransactionHistoryProps) 
                   </span>
                   {(tx.txHash || tx.cid) && (
                     <a
-                      href={tx.txHash ? getSuiExplorerUrl(tx.txHash) : getWalrusExplorerUrl(tx.cid!)}
+                      href={tx.txHash ? getSuiTxUrlAuto(tx.txHash) : getWalrusBlobUrlAuto(tx.cid!)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#4DA2FF] hover:text-[#6DB3FF] transition-colors"
                       onClick={(e) => e.stopPropagation()}
+                      title={tx.txHash ? 'View on Sui Explorer' : 'View on Walrus'}
                     >
                       <FaExternalLinkAlt className="w-4 h-4" />
                     </a>

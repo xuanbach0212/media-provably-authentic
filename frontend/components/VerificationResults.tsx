@@ -10,6 +10,7 @@ import Card3D from './Card3D';
 import TransactionHistory from './TransactionHistory';
 import { staggerContainer, cardEntrance, itemVariants, expandCollapse, iconRotate } from '@/lib/animations';
 import { blockchainConfetti } from '@/lib/confetti';
+import { getSuiTxUrlAuto } from '@/lib/explorers';
 
 interface VerificationResultsProps {
   report: any;
@@ -265,7 +266,7 @@ export default function VerificationResults({ report }: VerificationResultsProps
         </button>
         {expandedSections.blockchain && report.blockchainAttestation && (
           <div className="mt-4 pt-4 border-t border-dark-border text-sm text-dark-muted space-y-3">
-            <p><strong>Transaction Hash:</strong> <a href={`https://suiscan.xyz/mainnet/tx/${report.blockchainAttestation.transactionHash}`} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all">{report.blockchainAttestation.transactionHash}</a></p>
+            <p><strong>Transaction Hash:</strong> <a href={getSuiTxUrlAuto(report.blockchainAttestation.txHash || report.blockchainAttestation.transactionHash)} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all" title="View on Sui Explorer">{report.blockchainAttestation.txHash || report.blockchainAttestation.transactionHash}</a></p>
             <p><strong>Walrus Report CID:</strong> <a href={`https://walrus.com/cid/${report.blockchainAttestation.reportCID}`} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all">{report.blockchainAttestation.reportCID}</a></p>
             <p><strong>Enclave ID:</strong> <span className="font-mono">{report.blockchainAttestation.enclaveId}</span></p>
             <p><strong>Attested At:</strong> {new Date(report.blockchainAttestation.timestamp).toLocaleString()}</p>
