@@ -6,12 +6,23 @@ import { useCurrentAccount, useSignPersonalMessage } from '@mysten/dapp-kit';
 
 interface MediaUploaderProps {
   onUploadComplete: (jobId: string, walletAddress: string, signature: string, initialProgress?: any) => void;
-  onUploadStart?: () => void; // Notify parent when upload starts
+  onProgressUpdate?: (update: any) => void;
+  onAnalysisComplete?: (report: any) => void;
+  onAnalysisError?: (error: any) => void;
+  onUploadStart?: () => void;
+  onFileSelected?: (fileInfo: { preview: string; filename: string; fileSize: number; fileType: string; file?: File }) => void;
 }
 
-export default function MediaUploader({ onUploadComplete, onUploadStart }: MediaUploaderProps) {
+export default function MediaUploader({ 
+  onUploadComplete, 
+  onUploadStart,
+  onProgressUpdate,
+  onAnalysisComplete,
+  onAnalysisError,
+  onFileSelected
+}: MediaUploaderProps) {
   const account = useCurrentAccount();
-  const { mutate: signMessage } = useSignPersonalMessage();
+  const { mutateAsync: signMessageAsync } = useSignPersonalMessage();
   
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -65,15 +76,25 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPreview(reader.result as string);
+      const previewUrl = reader.result as string;
+      setPreview(previewUrl);
+      
+      // Notify parent with file info
+      if (onFileSelected) {
+        onFileSelected({
+          preview: previewUrl,
+          filename: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          file: file, // Pass original File object
+        });
+      }
     };
     reader.readAsDataURL(file);
   };
 
   const handleUpload = async () => {
     if (!file) return;
-
-    // Check wallet connection
     if (!account) {
       setError('Please connect your wallet first');
       return;
@@ -82,58 +103,55 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
     setUploading(true);
     setError(null);
     
-    // Notify parent that upload is starting
     if (onUploadStart) {
       onUploadStart();
     }
 
     try {
-      // Sign message with wallet
       const message = `Upload media for verification: ${file.name} (${new Date().toISOString()})`;
       const messageBytes = new TextEncoder().encode(message);
 
-      signMessage(
-        { message: messageBytes },
-        {
-          onSuccess: async (result) => {
-            try {
-              console.log('[MediaUploader] Message signed successfully');
-              
-              // Upload with signature
-              const response = await ApiClient.uploadMedia(
-                file,
-                account.address,
-                result.signature
-              );
-              
-              console.log('[MediaUploader] Upload successful:', response);
-              onUploadComplete(response.jobId, account.address, result.signature, response.progress);
-            } catch (err: any) {
-              setError(err.message || 'Upload failed');
-              console.error('[MediaUploader] Upload error:', err);
-              setUploading(false);
-            }
-          },
-          onError: (err) => {
-            setError('Failed to sign message: ' + err.message);
-            console.error('[MediaUploader] Signing error:', err);
-            setUploading(false);
-          },
-        }
+      console.log('[MediaUploader] 🔐 Requesting wallet signature...');
+      console.log('[MediaUploader] Wallet:', account.address);
+
+      // Use mutateAsync with timeout race
+      const signPromise = signMessageAsync({ message: messageBytes });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Wallet signing timeout after 30 seconds')), 30000);
+      });
+
+      const result = await Promise.race([signPromise, timeoutPromise]);
+      
+      console.log('[MediaUploader] ✅ Signature received:', result.signature);
+
+      // Upload with signature
+      console.log('[MediaUploader] 📤 Uploading to backend...');
+      const response = await ApiClient.uploadMedia(
+        file,
+        account.address,
+        result.signature
       );
+      
+      console.log('[MediaUploader] ✅ Upload successful:', response);
+      onUploadComplete(response.jobId, account.address, result.signature, response.progress);
+      
     } catch (err: any) {
       setError(err.message || 'Upload failed');
-      console.error('[MediaUploader] Upload error:', err);
+      console.error('[MediaUploader] ❌ Error:', err);
       setUploading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6">
+    <div className="w-full">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center ${
-          dragActive ? 'border-blue-500 bg-blue-900/20' : 'border-dark-border'
-        } ${file ? 'border-green-500' : ''}`}
+        className={`relative rounded-xl p-6 text-center transition-all duration-300 border-2 ${
+          dragActive 
+            ? 'border-[#4DA2FF] bg-[#4DA2FF]/10' 
+            : file 
+            ? 'border-[#22C55E] bg-[#22C55E]/10' 
+            : 'border-gray-700 bg-gray-900/30 hover:border-gray-600'
+        }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -150,93 +168,107 @@ export default function MediaUploader({ onUploadComplete, onUploadStart }: Media
         />
 
         {!preview ? (
-          <label htmlFor="file-upload" className="cursor-pointer">
+          <label htmlFor="file-upload" className="cursor-pointer block">
             <div className="space-y-4">
-              <svg
-                className="mx-auto h-12 w-12 text-dark-muted"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="text-gray-600">
-                <span className="font-semibold text-blue-600 hover:text-blue-500">
-                  Click to upload
-                </span>{' '}
-                or drag and drop
+              {/* Compact Icon */}
+              <div className="relative mx-auto w-16 h-16">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#06B6D4] flex items-center justify-center shadow-lg">
+                  <svg
+                    className="h-8 w-8 text-white"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 48 48"
+                  >
+                    <path
+                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
-              <p className="text-sm text-gray-500">
-                Image or video up to 100MB
+              <div>
+                <p className="text-base font-semibold text-white mb-1">
+                  Drop your media here
+                </p>
+                <p className="text-sm text-gray-400">
+                  or <span className="text-[#4DA2FF] underline">browse files</span>
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">
+                📸 Images & 🎬 Videos • Max 100MB
               </p>
             </div>
           </label>
         ) : (
-          <div className="space-y-4">
-            {file?.type.startsWith('image/') && (
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-64 mx-auto rounded border border-dark-border"
-              />
-            )}
-            {file?.type.startsWith('video/') && (
-              <video
-                src={preview}
-                className="max-h-64 mx-auto rounded border border-dark-border"
-                controls
-              />
-            )}
-            <div className="text-sm text-dark-text">
-              {file?.name} ({(file!.size / 1024 / 1024).toFixed(2)} MB)
+          <div className="space-y-3">
+            {/* Compact Preview */}
+            <div className="relative w-32 h-32 mx-auto rounded-lg overflow-hidden border-2 border-[#22C55E]/50">
+              {file?.type.startsWith('image/') && (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+              )}
+              {file?.type.startsWith('video/') && (
+                <video
+                  src={preview}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              <button
+                onClick={() => {
+                  setFile(null);
+                  setPreview(null);
+                }}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 flex items-center justify-center transition-colors text-white text-xs"
+                disabled={uploading}
+              >
+                ✕
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setFile(null);
-                setPreview(null);
-              }}
-              className="text-sm text-red-400 hover:text-red-300"
-              disabled={uploading}
-            >
-              Remove
-            </button>
+            <div className="text-center text-xs">
+              <p className="text-white font-medium truncate">{file?.name}</p>
+              <p className="text-gray-400">{(file!.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+
+            {/* Sign & Verify Button */}
+            {file && !uploading && account && (
+              <button
+                onClick={handleUpload}
+                className="w-full bg-gradient-to-r from-[#4DA2FF] to-[#06B6D4] hover:from-[#6FBCFF] hover:to-[#14B8A6] text-white py-2.5 px-4 rounded-lg font-semibold text-sm shadow-lg transform hover:scale-[1.02] transition-all"
+              >
+                🔐 Sign & Verify Authenticity
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {error && (
-        <div className="mt-4 p-3 bg-red-900/20 border border-red-900 rounded text-red-400 text-sm">
-          {error}
+        <div className="mt-3 p-2.5 bg-red-900/20 border border-red-500/30 rounded-lg text-red-400 text-xs">
+          ⚠️ {error}
         </div>
       )}
 
       {!account && (
-        <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-900 rounded-lg text-center">
-          <p className="text-sm text-yellow-400">
-            Please connect your Sui wallet to upload and verify media
-          </p>
+        <div className="mt-3 p-2.5 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-xs text-center">
+          ⚠️ Connect your Sui wallet to verify media authenticity
         </div>
       )}
 
-      {file && !uploading && account && (
-        <button
-          onClick={handleUpload}
-          className="mt-6 w-full btn-sui text-white py-3 px-6 rounded-lg font-semibold shadow-lg"
-        >
-          Sign & Verify Authenticity
-        </button>
-      )}
-
       {uploading && (
-        <div className="mt-6 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-2 text-dark-muted">Uploading and encrypting...</p>
+        <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+          <div className="flex items-center justify-center gap-2 text-blue-400 text-sm">
+            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Uploading and encrypting...</span>
+          </div>
+          <p className="text-xs text-gray-400 text-center mt-1">Please wait while we secure your media</p>
         </div>
       )}
     </div>

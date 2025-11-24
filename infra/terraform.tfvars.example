@@ -1,0 +1,37 @@
+# Terraform Variables
+# Copy this file to terraform.tfvars and fill in your values
+
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "hackathon"
+
+# Project
+project_name = "media-auth"
+
+# Instance Configuration
+instance_type      = "c6a.xlarge"  # c6a.xlarge (cheapest) or c6i.xlarge
+use_spot_instance  = true          # true = $25-40/mo, false = $120-150/mo
+spot_max_price     = "0.10"        # Max $/hour for spot
+allocate_elastic_ip = false        # true = +$3.60/mo for stable IP
+
+# Enclave Resources
+enclave_memory_mb = 6144  # 6GB for enclave (2GB left for parent)
+enclave_cpu_count = 2     # 2 cores for enclave (2 cores left for parent)
+
+# SSH Access
+# Generate key with: ssh-keygen -t rsa -b 4096 -f ~/.ssh/nautilus-key
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAA... your-email@example.com"
+
+# Security (WARNING: Restrict these in production!)
+allowed_ssh_cidr = ["0.0.0.0/0"]  # SSH access from anywhere
+allowed_api_cidr = ["0.0.0.0/0"]  # API access from anywhere
+
+# Optional: Auto-shutdown to save cost
+auto_shutdown_enabled = false     # Enable auto-shutdown
+auto_shutdown_cron    = "0 2 * * *"  # Shutdown at 2 AM daily
+
+# Tags
+tags = {
+  Owner   = "your-name"
+  Purpose = "hackathon-demo"
+}

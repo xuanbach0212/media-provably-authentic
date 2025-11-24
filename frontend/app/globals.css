@@ -45,6 +45,72 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Service-specific color classes */
+.service-walrus {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-color: #3B82F6;
+  color: #93C5FD;
+}
+
+.service-seal {
+  background-color: rgba(168, 85, 247, 0.2);
+  border-color: #A855F7;
+  color: #D8B4FE;
+}
+
+.service-sui {
+  background-color: rgba(6, 182, 212, 0.2);
+  border-color: #06B6D4;
+  color: #67E8F9;
+}
+
+.service-ai {
+  background-color: rgba(16, 185, 129, 0.2);
+  border-color: #10B981;
+  color: #6EE7B7;
+}
+
+.service-reverse-search {
+  background-color: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+  color: #FCD34D;
+}
+
+.service-queue {
+  background-color: rgba(99, 102, 241, 0.2);
+  border-color: #6366F1;
+  color: #A5B4FC;
+}
+
+.service-gateway {
+  background-color: rgba(139, 92, 246, 0.2);
+  border-color: #8B5CF6;
+  color: #C4B5FD;
+}
+
+.service-aggregator {
+  background-color: rgba(236, 72, 153, 0.2);
+  border-color: #EC4899;
+  color: #F9A8D4;
+}
+
+/* Shake animation for failed nodes */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s;
+}
+
 /* Sui Glow animation for active nodes */
 @keyframes pulse-glow {
   0%, 100% {
@@ -404,4 +470,45 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Landing Page Enhancements */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Parallax scroll effect */
+.parallax-slow {
+  will-change: transform;
+}
+
+/* Section spacing for landing page */
+section {
+  scroll-margin-top: 80px;
+}
+
+/* Fade in on scroll */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fade-in-up 0.8s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #4DA2FF 0%, #06B6D4 50%, #14B8A6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: gradient-shift 3s ease infinite;
 }

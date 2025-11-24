@@ -145,6 +145,10 @@ export interface EnclaveAttestation {
   timestamp: string;
   enclaveId: string;
   mrenclave?: string;
+  // NEW: Real Nautilus attestation fields
+  attestationDocument?: string; // Base64-encoded AWS Nitro attestation
+  publicKey?: string; // Enclave's ephemeral public key
+  pcrs?: Record<string, string>; // PCR measurements
 }
 
 export interface VerificationReport {

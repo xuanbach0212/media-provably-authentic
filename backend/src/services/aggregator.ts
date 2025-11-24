@@ -131,11 +131,13 @@ export class AggregatorService {
     // 2. Submit attestation to blockchain
     // Use the first enclave's signature for now (in production, might aggregate signatures)
     const enclaveSignature = consensusReport.enclaveAttestation?.signature || "";
+    const enclaveId = consensusReport.enclaveAttestation?.enclaveId || "consensus";
     const blockchainAttestation = await this.blockchain.submitAttestation(
       jobId,
       mediaHash,
       reportCID,
-      enclaveSignature
+      enclaveSignature,
+      enclaveId
     );
     console.log(
       `[Aggregator] ✓ Attestation submitted to Sui: ${blockchainAttestation.txHash}`

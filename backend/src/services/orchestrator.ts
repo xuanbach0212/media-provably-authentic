@@ -14,7 +14,7 @@ import { NautilusService } from "./nautilus";
 const AI_DETECTION_URL =
   process.env.AI_DETECTION_URL || "http://localhost:8000";
 const REVERSE_SEARCH_URL =
-  process.env.REVERSE_SEARCH_URL || "http://localhost:8001";
+  process.env.REVERSE_SEARCH_URL || "http://localhost:8002";
 const ENCLAVE_ID = process.env.ENCLAVE_ID || "mock_enclave_1";
 
 export class OrchestrationService {
@@ -53,16 +53,10 @@ export class OrchestrationService {
     const aiDetection = await this.runAIDetection(decryptedMedia);
     console.log(`[Orchestrator] AI ensemble score: ${aiDetection.ensembleScore}`);
 
-    // 3. Conditionally run reverse search based on AI ensemble score
-    // Only run if score suggests potential fake (< 0.5) or high confidence real (> 0.8)
-    let reverseSearch: ProvenanceResult | null = null;
-    if (aiDetection.ensembleScore < 0.5 || aiDetection.ensembleScore > 0.8) {
-      console.log(`[Orchestrator] Running reverse search (score threshold met)...`);
-      reverseSearch = await this.runReverseSearch(decryptedMedia, job.metadata);
-      console.log(`[Orchestrator] Found ${reverseSearch.matches.length} matches`);
-    } else {
-      console.log(`[Orchestrator] Skipping reverse search (score: ${aiDetection.ensembleScore})`);
-    }
+    // 3. Always run reverse search (for demo/hackathon)
+    console.log(`[Orchestrator] Running reverse search...`);
+    const reverseSearch = await this.runReverseSearch(decryptedMedia, job.metadata);
+    console.log(`[Orchestrator] Found ${reverseSearch.matches.length} matches`);
 
     // 4. Build analysis data (NO verdict determination)
     const analysisData: AnalysisData = {
@@ -93,20 +87,29 @@ export class OrchestrationService {
     };
 
     // 6. Sign the report with Nautilus TEE enclave
-    let enclaveSignature: string;
+    let attestationResult: {
+      signature: string;
+      attestationDocument?: string;
+      publicKey?: string;
+      pcrs?: Record<string, string>;
+    };
+    
     try {
-      enclaveSignature = await this.nautilus.generateAttestation(report);
-      console.log("[Orchestrator] ✓ Report signed by Nautilus");
+      attestationResult = await this.nautilus.generateAttestation(report);
+      console.log(`[Orchestrator] ✓ Report signed by Nautilus enclave ${this.enclaveId}`);
     } catch (error: any) {
       console.error("[Orchestrator] Nautilus signing failed:", error.message);
       throw error;
     }
     
     report.enclaveAttestation = {
-      signature: enclaveSignature,
+      signature: attestationResult.signature,
       enclaveId: this.enclaveId,
       timestamp: new Date().toISOString(),
       mrenclave: this.nautilus.getEnclaveInfo().mrenclave,
+      attestationDocument: attestationResult.attestationDocument,
+      publicKey: attestationResult.publicKey,
+      pcrs: attestationResult.pcrs,
     };
 
     // NOTE: Walrus storage and blockchain submission now handled by Aggregator

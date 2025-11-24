@@ -77,7 +77,7 @@ echo "STEP 1: Starting Python Services"
 echo "========================================================================"
 
 # Start AI Detection Service
-echo -e "${BLUE}Starting AI Detection Service (port 8001)...${NC}"
+echo -e "${BLUE}Starting AI Detection Service (port 8000)...${NC}"
 cd "$PROJECT_ROOT/services/ai-detection"
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
@@ -106,31 +106,12 @@ cd "$PROJECT_ROOT"
 
 # Wait for Python services
 sleep 5
-wait_for_service "http://localhost:8001/health" "AI Detection Service"
+wait_for_service "http://localhost:8000/health" "AI Detection Service"
 wait_for_service "http://localhost:8002/health" "Reverse Search Service"
 
 echo ""
 echo "========================================================================"
-echo "STEP 2: Starting Mock Infrastructure Services"
-echo "========================================================================"
-
-# Start Mock Services
-echo -e "${BLUE}Starting Mock Services (port 3002)...${NC}"
-cd "$PROJECT_ROOT/services/mock-services"
-if [ ! -d "node_modules" ]; then
-    echo "Installing dependencies..."
-    npm install --silent
-fi
-nohup npm run dev > "$PROJECT_ROOT/logs/mock-services.log" 2>&1 &
-cd "$PROJECT_ROOT"
-
-# Wait for mock services
-sleep 3
-wait_for_service "http://localhost:3002/health" "Mock Services"
-
-echo ""
-echo "========================================================================"
-echo "STEP 3: Starting Backend API"
+echo "STEP 2: Starting Backend API"
 echo "========================================================================"
 
 # Start Backend
@@ -149,7 +130,7 @@ wait_for_service "http://localhost:3001/health" "Backend API"
 
 echo ""
 echo "========================================================================"
-echo "STEP 4: Starting Frontend"
+echo "STEP 3: Starting Frontend"
 echo "========================================================================"
 
 # Start Frontend
@@ -172,9 +153,8 @@ echo "✅ ALL SERVICES STARTED SUCCESSFULLY!"
 echo "========================================================================"
 echo ""
 echo "Service Status:"
-echo "  ✓ AI Detection:    http://localhost:8001"
+echo "  ✓ AI Detection:    http://localhost:8000"
 echo "  ✓ Reverse Search:  http://localhost:8002"
-echo "  ✓ Mock Services:   http://localhost:3002"
 echo "  ✓ Backend API:     http://localhost:3001"
 echo "  ✓ Frontend:        http://localhost:3000"
 echo ""

@@ -7,8 +7,10 @@ import EnsembleGauge from './charts/EnsembleGauge';
 import ModelScoresBar from './charts/ModelScoresBar';
 import FileInfoCard from './FileInfoCard';
 import Card3D from './Card3D';
+import TransactionHistory from './TransactionHistory';
 import { staggerContainer, cardEntrance, itemVariants, expandCollapse, iconRotate } from '@/lib/animations';
 import { blockchainConfetti } from '@/lib/confetti';
+import { getSuiTxUrlAuto } from '@/lib/explorers';
 
 interface VerificationResultsProps {
   report: any;
@@ -96,6 +98,9 @@ export default function VerificationResults({ report }: VerificationResultsProps
 
       {/* Ensemble Score Gauge */}
       <EnsembleGauge score={ensembleScore} />
+
+      {/* Transaction History */}
+      <TransactionHistory report={report} />
 
       {/* File Information Card */}
       {analysisData?.forensicAnalysis && (
@@ -261,10 +266,61 @@ export default function VerificationResults({ report }: VerificationResultsProps
         </button>
         {expandedSections.blockchain && report.blockchainAttestation && (
           <div className="mt-4 pt-4 border-t border-dark-border text-sm text-dark-muted space-y-3">
-            <p><strong>Transaction Hash:</strong> <a href={`https://suiscan.xyz/mainnet/tx/${report.blockchainAttestation.transactionHash}`} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all">{report.blockchainAttestation.transactionHash}</a></p>
+            <p><strong>Transaction Hash:</strong> {(() => {
+              const txHash = report.blockchainAttestation.txHash || report.blockchainAttestation.transactionHash;
+              const url = getSuiTxUrlAuto(txHash);
+              return url ? (
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all" title="View on Sui Explorer">{txHash}</a>
+              ) : (
+                <span className="font-mono text-yellow-400" title="Invalid transaction hash (mock data)">{txHash} <span className="text-xs">(Mock Data)</span></span>
+              );
+            })()}</p>
             <p><strong>Walrus Report CID:</strong> <a href={`https://walrus.com/cid/${report.blockchainAttestation.reportCID}`} target="_blank" rel="noopener noreferrer" className="text-[#4DA2FF] hover:underline font-mono break-all">{report.blockchainAttestation.reportCID}</a></p>
             <p><strong>Enclave ID:</strong> <span className="font-mono">{report.blockchainAttestation.enclaveId}</span></p>
             <p><strong>Attested At:</strong> {new Date(report.blockchainAttestation.timestamp).toLocaleString()}</p>
+            
+            {/* TEE Attestation Details */}
+            {report.enclaveAttestation?.attestationDocument && (
+              <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-cyan-500/30">
+                <h4 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+                  🔒 TEE Attestation Proof
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-col">
+                    <span className="text-gray-400 mb-1">Enclave ID:</span>
+                    <span className="text-white font-mono bg-gray-900/50 px-2 py-1 rounded">
+                      {report.enclaveAttestation.enclaveId}
+                    </span>
+                  </div>
+                  {report.enclaveAttestation.publicKey && (
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 mb-1">Public Key:</span>
+                      <span className="text-white font-mono text-[10px] bg-gray-900/50 px-2 py-1 rounded break-all">
+                        {report.enclaveAttestation.publicKey.substring(0, 64)}...
+                      </span>
+                    </div>
+                  )}
+                  {report.enclaveAttestation.pcrs && report.enclaveAttestation.pcrs.PCR0 && (
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 mb-1">PCR0 (Platform Configuration):</span>
+                      <span className="text-white font-mono text-[10px] bg-gray-900/50 px-2 py-1 rounded break-all">
+                        {report.enclaveAttestation.pcrs.PCR0.substring(0, 64)}...
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-3 pt-3 border-t border-gray-700">
+                    <a
+                      href="https://docs.sui.io/concepts/cryptography/nautilus"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 text-xs inline-flex items-center gap-1"
+                    >
+                      Learn about Nautilus TEE →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {expandedSections.blockchain && !report.blockchainAttestation && (
