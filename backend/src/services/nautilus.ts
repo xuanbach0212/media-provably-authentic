@@ -33,30 +33,42 @@ export class NautilusService {
   private apiUrl: string;
   private enclaveId: string;
   private mrenclave: string;
-  private useMockMode: boolean;
-  private mockPrivateKey: string;
 
   constructor() {
     this.apiUrl = NAUTILUS_ENCLAVE_URL;
     this.enclaveId = ENCLAVE_ID;
     this.mrenclave = NAUTILUS_MRENCLAVE;
 
-    // Use production mode if URL configured and enabled
-    this.useMockMode = !this.apiUrl || !NAUTILUS_ENABLED;
+    if (!this.apiUrl || !NAUTILUS_ENABLED) {
+      throw new Error("[Nautilus] Nautilus enclave URL not configured or disabled!");
+    }
 
-    if (this.useMockMode) {
-      console.log("[Nautilus] ⚠️  Using mock TEE mode (no enclave URL configured)");
-      // Generate mock RSA key pair for signing
-      const { privateKey } = crypto.generateKeyPairSync("rsa", {
-        modulusLength: 2048,
-        publicKeyEncoding: { type: "spki", format: "pem" },
-        privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    console.log(`[Nautilus] ✅ Connected to Nitro Enclave: ${this.apiUrl}`);
+    console.log(`[Nautilus] Enclave ID: ${this.enclaveId}`);
+    
+    // Fetch mrenclave from Nautilus if not provided
+    if (!this.mrenclave) {
+      this.initializeMrenclave();
+    }
+  }
+
+  /**
+   * Initialize mrenclave from Nautilus enclave
+   */
+  private async initializeMrenclave(): Promise<void> {
+    try {
+      const response = await axios.get(`${this.apiUrl}/get_attestation`, {
+        timeout: 10000,
       });
-      this.mockPrivateKey = privateKey;
-    } else {
-      console.log(`[Nautilus] ✅ Connected to Nitro Enclave: ${this.apiUrl}`);
-      console.log(`[Nautilus] Enclave ID: ${this.enclaveId}`);
-      this.mockPrivateKey = "";
+      
+      // Extract mrenclave from response
+      // Nautilus may return it directly or we need to parse from attestation
+      this.mrenclave = response.data.mrenclave || response.data.enclave_id || this.enclaveId;
+      console.log(`[Nautilus] ✓ MRENCLAVE: ${this.mrenclave}`);
+    } catch (error: any) {
+      console.error('[Nautilus] Failed to fetch mrenclave:', error.message);
+      // Fallback to enclave ID
+      this.mrenclave = this.enclaveId;
     }
   }
 
@@ -69,18 +81,6 @@ export class NautilusService {
     publicKey: string; // Enclave's ephemeral public key
     pcrs: Record<string, string>; // PCR measurements
   }> {
-    if (this.useMockMode) {
-      return {
-        attestationDocument: Buffer.from('mock_attestation').toString('base64'),
-        publicKey: 'mock_public_key',
-        pcrs: {
-          PCR0: 'mock_pcr0',
-          PCR1: 'mock_pcr1',
-          PCR2: 'mock_pcr2',
-        },
-      };
-    }
-
     try {
       console.log('[Nautilus] Fetching attestation document...');
       const response = await axios.get(`${this.apiUrl}/get_attestation`, {
@@ -125,12 +125,6 @@ export class NautilusService {
     pcrs?: Record<string, string>;
   }> {
     const dataHash = this.computeHash(reportData);
-
-    if (this.useMockMode) {
-      return {
-        signature: this.mockGenerateAttestation(dataHash),
-      };
-    }
 
     try {
       console.log(`[Nautilus] Requesting enclave to sign report...`);
@@ -202,10 +196,6 @@ export class NautilusService {
   ): Promise<boolean> {
     const dataHash = this.computeHash(reportData);
 
-    if (this.useMockMode) {
-      return this.mockVerifyAttestation(signature, dataHash);
-    }
-
     try {
       console.log(`[Nautilus] Verifying attestation...`);
 
@@ -239,12 +229,12 @@ export class NautilusService {
   getEnclaveInfo(): {
     enclaveId: string;
     mrenclave: string;
-    mode: "production" | "mock";
+    mode: "production";
   } {
     return {
       enclaveId: this.enclaveId,
-      mrenclave: this.mrenclave || `mock_mrenclave_${this.enclaveId}`,
-      mode: this.useMockMode ? "mock" : "production",
+      mrenclave: this.mrenclave, // Real value from Nautilus
+      mode: "production",
     };
   }
 
@@ -256,11 +246,6 @@ export class NautilusService {
     data: any,
     callback: (decryptedData: any) => Promise<T>
   ): Promise<T> {
-    if (this.useMockMode) {
-      console.log(`[Nautilus:Mock] Processing in simulated enclave ${this.enclaveId}`);
-      return await callback(data);
-    }
-
     try {
       console.log(`[Nautilus] Submitting data to enclave ${this.enclaveId}...`);
       
@@ -281,10 +266,6 @@ export class NautilusService {
    * Health check
    */
   async healthCheck(): Promise<boolean> {
-    if (this.useMockMode) {
-      return true; // Mock always available
-    }
-
     try {
       const response = await axios.get(`${this.apiUrl}/health_check`, {
         timeout: 5000,
@@ -295,30 +276,6 @@ export class NautilusService {
       console.warn('[Nautilus] ⚠️  Enclave health check failed');
       return false;
     }
-  }
-
-  // ========== Mock Implementation ==========
-
-  private mockGenerateAttestation(dataHash: string): string {
-    // Mock RSA signature
-    const sign = crypto.createSign("SHA256");
-    sign.update(dataHash);
-    sign.end();
-
-    const signature = sign.sign(this.mockPrivateKey, "base64");
-    
-    console.log(`[Nautilus:Mock] Generated mock attestation for enclave ${this.enclaveId}`);
-    return signature;
-  }
-
-  private mockVerifyAttestation(
-    signature: string,
-    dataHash: string
-  ): boolean {
-    // In mock mode, just check signature format
-    const isValid = signature.length > 0;
-    console.log(`[Nautilus:Mock] Verification: ${isValid}`);
-    return isValid;
   }
 
   private computeHash(data: any): string {

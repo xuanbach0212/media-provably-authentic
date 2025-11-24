@@ -212,10 +212,21 @@ class MultiWorkerProcessor {
       // Create final report (just use first enclave's report - all should have similar results)
       const finalReport = {
         ...results[0].report,
+        // Use "consensus" as enclave ID since this is aggregated from multiple enclaves
+        enclaveAttestation: {
+          ...results[0].report.enclaveAttestation,
+          enclaveId: "consensus",
+        },
       };
 
       console.log(
         `[MultiWorker] Processing complete with ${results.length} enclave reports`
+      );
+
+      // DEBUG: Log finalReport.enclaveAttestation
+      console.log(
+        `[MultiWorker] 🔍 DEBUG finalReport.enclaveAttestation:`,
+        JSON.stringify(finalReport.enclaveAttestation, null, 2)
       );
 
       // Finalize: Store to Walrus and submit to blockchain (single upload, no race condition)

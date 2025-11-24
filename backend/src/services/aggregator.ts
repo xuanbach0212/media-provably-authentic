@@ -132,6 +132,11 @@ export class AggregatorService {
     // Use the first enclave's signature for now (in production, might aggregate signatures)
     const enclaveSignature = consensusReport.enclaveAttestation?.signature || "";
     const enclaveId = consensusReport.enclaveAttestation?.enclaveId || "consensus";
+    
+    // DEBUG: Log what we're passing to blockchain
+    console.log(`[Aggregator] 🔍 DEBUG enclaveId being passed to blockchain: "${enclaveId}"`);
+    console.log(`[Aggregator] 🔍 DEBUG consensusReport.enclaveAttestation:`, JSON.stringify(consensusReport.enclaveAttestation, null, 2));
+    
     const blockchainAttestation = await this.blockchain.submitAttestation(
       jobId,
       mediaHash,
