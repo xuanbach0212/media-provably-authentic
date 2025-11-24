@@ -82,19 +82,34 @@ export const WALRUS_EXPLORERS = {
 function isValidSuiTxHash(txHash: string): boolean {
   if (!txHash) return false;
   
-  // Sui transaction digests are 32-byte hex strings (64 characters) with 0x prefix
-  // Total length should be 66 characters (0x + 64 hex chars)
-  if (!txHash.startsWith('0x')) return false;
-  if (txHash.length !== 66) return false;
+  // Sui supports two transaction digest formats:
+  // 1. Hex format: 0x + 64 hex chars (66 total)
+  // 2. Base58 format: 44 alphanumeric chars (no 0x prefix)
   
-  // Check if it's all zeros (mock data)
-  const hexPart = txHash.slice(2);
-  if (/^0+$/.test(hexPart)) return false;
+  // Check for hex format
+  if (txHash.startsWith('0x')) {
+    if (txHash.length !== 66) return false;
+    
+    // Check if it's all zeros (mock data)
+    const hexPart = txHash.slice(2);
+    if (/^0+$/.test(hexPart)) return false;
+    
+    // Check if it's valid hex
+    if (!/^[0-9a-fA-F]+$/.test(hexPart)) return false;
+    
+    return true;
+  }
   
-  // Check if it's valid hex
-  if (!/^[0-9a-fA-F]+$/.test(hexPart)) return false;
+  // Check for base58 format (used by SuiScan and other explorers)
+  // Base58 uses: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+  // Typical length: 43-44 characters
+  if (txHash.length >= 43 && txHash.length <= 44) {
+    // Check if it's valid base58 (no 0, O, I, l to avoid confusion)
+    if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(txHash)) return false;
+    return true;
+  }
   
-  return true;
+  return false;
 }
 
 /**

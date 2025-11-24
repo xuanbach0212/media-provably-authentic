@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { FaExternalLinkAlt, FaCheck, FaClock, FaLock, FaDatabase, FaShieldAlt } from 'react-icons/fa';
 import { useState } from 'react';
-import { getSuiTxUrlAuto, getWalrusBlobUrlAuto, getWalruscanBlobUrl, getCurrentNetwork } from '@/lib/explorers';
+import { getSuiTxUrlAuto, getWalruscanBlobUrl, getCurrentNetwork } from '@/lib/explorers';
 
 interface Transaction {
   step: number;
@@ -230,38 +230,21 @@ export default function TransactionHistory({ report }: TransactionHistoryProps) 
                       );
                     }
                     
-                    // For Walrus blobs - show both Walruscan and Aggregator links
+                    // For Walrus blobs - show only Walruscan link
                     if (tx.cid) {
-                      const aggregatorUrl = getWalrusBlobUrlAuto(tx.cid);
                       const walruscanUrl = tx.cid.length >= 20 ? getWalruscanBlobUrl(tx.cid, getCurrentNetwork()) : null;
                       
-                      return (aggregatorUrl || walruscanUrl) ? (
-                        <div className="flex items-center gap-2">
-                          {walruscanUrl && (
-                            <a
-                              href={walruscanUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#4DA2FF] hover:text-[#6DB3FF] transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                              title="View on Walruscan"
-                            >
-                              <FaExternalLinkAlt className="w-4 h-4" />
-                            </a>
-                          )}
-                          {aggregatorUrl && (
-                            <a
-                              href={aggregatorUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#6DB3FF] hover:text-[#8DC5FF] transition-colors text-xs"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Download from Aggregator"
-                            >
-                              ⬇️
-                            </a>
-                          )}
-                        </div>
+                      return walruscanUrl ? (
+                        <a
+                          href={walruscanUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#4DA2FF] hover:text-[#6DB3FF] transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          title="View on Walruscan"
+                        >
+                          <FaExternalLinkAlt className="w-4 h-4" />
+                        </a>
                       ) : (
                         <span className="text-xs text-yellow-400" title="Invalid blob ID (mock data)">
                           Mock Data
