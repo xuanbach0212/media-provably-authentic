@@ -194,6 +194,9 @@ export class OrchestrationService {
       return response.data;
     } catch (error: any) {
       console.error("Reverse search failed:", error.message);
+      console.error("Error code:", error.code);
+      console.error("Error response:", error.response?.status, error.response?.statusText);
+      console.error("Full error:", error);
       // Return empty result if reverse search fails
       return {
         matches: [],
