@@ -69,14 +69,15 @@ export class SuiService {
     jobId: string,
     mediaHash: string,
     reportCID: string,
-    enclaveSignature: string
+    enclaveSignature: string,
+    enclaveId?: string
   ): Promise<BlockchainAttestation> {
     // Require real keys and contract
     if (!this.keypair || !this.packageId) {
       throw new Error(`[Sui] ❌ Missing configuration! keypair: ${!!this.keypair}, packageId: ${!!this.packageId}`);
     }
 
-    console.log(`[Sui] Submitting attestation for job ${jobId}...`);
+    console.log(`[Sui] Submitting attestation for job ${jobId} from enclave ${enclaveId || 'unknown'}...`);
 
     try {
       const tx = new Transaction();
@@ -124,7 +125,7 @@ export class SuiService {
         timestamp: new Date().toISOString(),
         reportCID: reportCID,
         mediaHash: mediaHash,
-        enclaveId: this.enclaveId || "unknown",
+        enclaveId: enclaveId || "unknown",
       };
     } catch (error: any) {
       console.error(`[Sui] ❌ Failed to submit attestation:`, error.message);
