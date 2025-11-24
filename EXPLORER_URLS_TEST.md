@@ -58,20 +58,28 @@ https://explorer.sui.io/txblock/ABC123DEF456...?network=testnet
 ## 💾 Walrus Testnet
 
 ### 1. Aggregator (For Downloading Blobs)
-**Base URL**: https://aggregator.walrus-testnet.walrus.space/v1  
-**Blob Format**: `https://aggregator.walrus-testnet.walrus.space/v1/{blob_id}`  
+
+**Primary (Recommended)**:
+- **Base URL**: https://wal-aggregator-testnet.staketab.org/v1
+- **Blob Format**: `https://wal-aggregator-testnet.staketab.org/v1/{blob_id}`
 
 **Example**:
 ```
-https://aggregator.walrus-testnet.walrus.space/v1/ABC123DEF456...
+https://wal-aggregator-testnet.staketab.org/v1/KeXgbvpHtg-RyN4c3v8_s_Kjf4kJlErVeMkoe0i1VnQ
 ```
 
 **What it does**: Downloads the raw blob data  
-**Status**: ✅ Official Walrus testnet aggregator
+**Status**: ✅ Public Walrus testnet aggregator (StakeTab)
 
-**Alternative Aggregators** (if main one is down):
-- `https://aggregator-testnet.walrus.space/v1/{blob_id}`
-- `https://walrus-testnet-aggregator.nodes.guru/v1/{blob_id}`
+**Alternative Aggregators** (if primary is down):
+1. `https://walrus-testnet-aggregator.nodes.guru/v1/{blob_id}`
+2. `https://walrus-testnet-aggregator.bartestnet.com/v1/{blob_id}`
+3. `https://sui-walrus-testnet.bwarelabs.com/aggregator/v1/{blob_id}`
+4. `https://walrus-testnet.blockscope.net/v1/{blob_id}`
+5. `https://walrus-cache-testnet.overclock.run/v1/{blob_id}`
+6. `https://walrus-testnet-aggregator.stakin-nodes.com/v1/{blob_id}`
+
+**Source**: [Walrus Web API Documentation](https://docs.wal.app/usage/web-api.html)
 
 ---
 

@@ -36,15 +36,27 @@ export const SUI_EXPLORERS = {
 
 /**
  * Walrus Storage Explorers
- * Note: Walrus uses "testnet" in their URLs, not "devnet"
+ * Multiple public aggregator endpoints available for testnet
+ * Source: https://docs.wal.app/usage/web-api.html
  */
 export const WALRUS_EXPLORERS = {
-  // Aggregator endpoint (for downloading blobs)
-  // Format: https://aggregator.walrus-testnet.walrus.space/v1/{blob_id}
+  // Aggregator endpoints (for downloading blobs)
+  // Multiple options available, using most reliable ones
   aggregator: {
-    testnet: 'https://aggregator.walrus-testnet.walrus.space/v1',
-    devnet: 'https://aggregator.walrus-testnet.walrus.space/v1', // Same as testnet
+    // Primary: StakeTab (reliable, well-maintained)
+    testnet: 'https://wal-aggregator-testnet.staketab.org/v1',
+    devnet: 'https://wal-aggregator-testnet.staketab.org/v1',
     mainnet: 'https://aggregator.walrus.space/v1', // Will be available on mainnet
+  },
+  // Alternative aggregators (backups)
+  alternativeAggregators: {
+    testnet: [
+      'https://walrus-testnet-aggregator.nodes.guru/v1',
+      'https://walrus-testnet-aggregator.bartestnet.com/v1',
+      'https://sui-walrus-testnet.bwarelabs.com/aggregator/v1',
+      'https://walrus-testnet.blockscope.net/v1',
+      'https://walrus-cache-testnet.overclock.run/v1',
+    ],
   },
   // Walrus Sites (for viewing blobs as websites)
   // Format: https://{blob_id}.walrus.site
@@ -56,16 +68,46 @@ export const WALRUS_EXPLORERS = {
 } as const;
 
 /**
+ * Validate if a Sui transaction hash looks valid
+ * @param txHash - Transaction hash to validate
+ * @returns true if hash looks valid
+ */
+function isValidSuiTxHash(txHash: string): boolean {
+  if (!txHash) return false;
+  
+  // Sui transaction digests are 32-byte hex strings (64 characters) with 0x prefix
+  // Total length should be 66 characters (0x + 64 hex chars)
+  if (!txHash.startsWith('0x')) return false;
+  if (txHash.length !== 66) return false;
+  
+  // Check if it's all zeros (mock data)
+  const hexPart = txHash.slice(2);
+  if (/^0+$/.test(hexPart)) return false;
+  
+  // Check if it's valid hex
+  if (!/^[0-9a-fA-F]+$/.test(hexPart)) return false;
+  
+  return true;
+}
+
+/**
  * Get Sui transaction explorer URL
  * @param txHash - Transaction hash/digest
  * @param network - Network (testnet, devnet, mainnet)
  * @param explorer - Which explorer to use (default: suiscan)
+ * @returns Explorer URL or null if hash is invalid
  */
 export function getSuiTxUrl(
   txHash: string,
   network: Network = 'testnet',
   explorer: keyof typeof SUI_EXPLORERS = 'suiscan'
-): string {
+): string | null {
+  // Validate transaction hash
+  if (!isValidSuiTxHash(txHash)) {
+    console.warn(`[Explorers] Invalid Sui transaction hash: ${txHash}`);
+    return null;
+  }
+  
   const baseUrl = SUI_EXPLORERS[explorer][network];
   
   if (explorer === 'official') {
@@ -166,16 +208,38 @@ export function getCurrentNetwork(): Network {
 }
 
 /**
- * Convenience function: Get Sui TX URL with current network
+ * Validate if a Walrus blob ID looks valid
+ * @param blobId - Blob ID to validate
+ * @returns true if blob ID looks valid
  */
-export function getSuiTxUrlAuto(txHash: string): string {
+function isValidWalrusBlobId(blobId: string): boolean {
+  if (!blobId) return false;
+  
+  // Walrus blob IDs are typically base64url encoded (43-44 characters)
+  // They contain alphanumeric, -, and _ characters
+  if (blobId.length < 20) return false; // Too short
+  if (!/^[A-Za-z0-9_-]+$/.test(blobId)) return false; // Invalid characters
+  
+  return true;
+}
+
+/**
+ * Convenience function: Get Sui TX URL with current network
+ * Returns null if transaction hash is invalid (e.g., mock data)
+ */
+export function getSuiTxUrlAuto(txHash: string): string | null {
   return getSuiTxUrl(txHash, getCurrentNetwork());
 }
 
 /**
  * Convenience function: Get Walrus blob URL with current network
+ * Returns null if blob ID is invalid
  */
-export function getWalrusBlobUrlAuto(blobId: string): string {
+export function getWalrusBlobUrlAuto(blobId: string): string | null {
+  if (!isValidWalrusBlobId(blobId)) {
+    console.warn(`[Explorers] Invalid Walrus blob ID: ${blobId}`);
+    return null;
+  }
   return getWalrusBlobUrl(blobId, getCurrentNetwork());
 }
 

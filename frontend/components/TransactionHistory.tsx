@@ -208,18 +208,30 @@ export default function TransactionHistory({ report }: TransactionHistoryProps) 
                   <span className="text-xs text-dark-muted">
                     {formatTimestamp(tx.timestamp)}
                   </span>
-                  {(tx.txHash || tx.cid) && (
-                    <a
-                      href={tx.txHash ? getSuiTxUrlAuto(tx.txHash) : getWalrusBlobUrlAuto(tx.cid!)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#4DA2FF] hover:text-[#6DB3FF] transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                      title={tx.txHash ? 'View on Sui Explorer' : 'View on Walrus'}
-                    >
-                      <FaExternalLinkAlt className="w-4 h-4" />
-                    </a>
-                  )}
+                  {(() => {
+                    const url = tx.txHash 
+                      ? getSuiTxUrlAuto(tx.txHash) 
+                      : tx.cid 
+                        ? getWalrusBlobUrlAuto(tx.cid) 
+                        : null;
+                    
+                    return url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#4DA2FF] hover:text-[#6DB3FF] transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                        title={tx.txHash ? 'View on Sui Explorer' : 'View on Walrus'}
+                      >
+                        <FaExternalLinkAlt className="w-4 h-4" />
+                      </a>
+                    ) : tx.txHash || tx.cid ? (
+                      <span className="text-xs text-yellow-400" title="Invalid transaction hash or blob ID (mock data)">
+                        Mock Data
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </div>
