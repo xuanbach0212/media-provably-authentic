@@ -90,12 +90,23 @@ function isValidSuiTxHash(txHash: string): boolean {
   if (txHash.startsWith('0x')) {
     if (txHash.length !== 66) return false;
     
-    // Check if it's all zeros (mock data)
     const hexPart = txHash.slice(2);
+    
+    // Check if it's valid hex first
+    if (!/^[0-9a-fA-F]+$/.test(hexPart)) return false;
+    
+    // Check for mock data patterns:
+    // 1. All zeros
     if (/^0+$/.test(hexPart)) return false;
     
-    // Check if it's valid hex
-    if (!/^[0-9a-fA-F]+$/.test(hexPart)) return false;
+    // 2. Mostly zeros (more than 80% zeros = likely mock data)
+    // Count zeros in the hex string
+    const zeroCount = (hexPart.match(/0/g) || []).length;
+    const zeroPercentage = zeroCount / hexPart.length;
+    if (zeroPercentage > 0.8) {
+      console.warn(`[Explorers] Suspicious transaction hash (${(zeroPercentage * 100).toFixed(0)}% zeros): ${txHash}`);
+      return false;
+    }
     
     return true;
   }
