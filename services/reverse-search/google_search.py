@@ -87,6 +87,17 @@ class GoogleReverseSearch:
         Tries multiple services for reliability
         """
         try:
+            # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+            if image.mode in ('RGBA', 'LA', 'P'):
+                # Create white background
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                if image.mode == 'P':
+                    image = image.convert('RGBA')
+                background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+                image = background
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
             # Convert image to bytes
             buffered = BytesIO()
             image.save(buffered, format="JPEG", quality=85)
