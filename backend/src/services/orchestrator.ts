@@ -53,16 +53,10 @@ export class OrchestrationService {
     const aiDetection = await this.runAIDetection(decryptedMedia);
     console.log(`[Orchestrator] AI ensemble score: ${aiDetection.ensembleScore}`);
 
-    // 3. Conditionally run reverse search based on AI ensemble score
-    // Only run if score suggests potential fake (< 0.5) or high confidence real (> 0.8)
-    let reverseSearch: ProvenanceResult | null = null;
-    if (aiDetection.ensembleScore < 0.5 || aiDetection.ensembleScore > 0.8) {
-      console.log(`[Orchestrator] Running reverse search (score threshold met)...`);
-      reverseSearch = await this.runReverseSearch(decryptedMedia, job.metadata);
-      console.log(`[Orchestrator] Found ${reverseSearch.matches.length} matches`);
-    } else {
-      console.log(`[Orchestrator] Skipping reverse search (score: ${aiDetection.ensembleScore})`);
-    }
+    // 3. Always run reverse search (for demo/hackathon)
+    console.log(`[Orchestrator] Running reverse search...`);
+    const reverseSearch = await this.runReverseSearch(decryptedMedia, job.metadata);
+    console.log(`[Orchestrator] Found ${reverseSearch.matches.length} matches`);
 
     // 4. Build analysis data (NO verdict determination)
     const analysisData: AnalysisData = {
