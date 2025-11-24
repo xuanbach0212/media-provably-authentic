@@ -81,14 +81,16 @@ export class SuiService {
     try {
       const tx = new Transaction();
 
-      // Try without clock first (some contracts don't need it)
+      // Contract expects: job_id, media_hash, report_cid, verdict, enclave_signature, clock
       tx.moveCall({
         target: `${this.packageId}::attestation::submit_attestation`,
         arguments: [
           tx.pure.string(jobId),
           tx.pure.string(mediaHash),
           tx.pure.string(reportCID),
+          tx.pure.string("verified"), // verdict - using "verified" as default
           tx.pure.string(enclaveSignature),
+          tx.object("0x6"), // Clock object (shared object at 0x6)
         ],
       });
 
