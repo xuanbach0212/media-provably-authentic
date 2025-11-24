@@ -11,40 +11,47 @@ export type Network = 'testnet' | 'devnet' | 'mainnet';
  */
 export const SUI_EXPLORERS = {
   // Primary: SuiScan (most popular, best UX)
+  // Format: https://suiscan.xyz/testnet/tx/{digest}
   suiscan: {
     testnet: 'https://suiscan.xyz/testnet',
     devnet: 'https://suiscan.xyz/devnet',
     mainnet: 'https://suiscan.xyz/mainnet',
   },
   // Alternative: SuiVision
+  // Format: https://testnet.suivision.xyz/txblock/{digest}
   suivision: {
     testnet: 'https://testnet.suivision.xyz',
     devnet: 'https://devnet.suivision.xyz',
     mainnet: 'https://suivision.xyz',
   },
   // Official: Sui Foundation Explorer
+  // Format: https://suiexplorer.com/?network=testnet (then search)
+  // Or: https://explorer.sui.io/txblock/{digest}?network=testnet
   official: {
-    testnet: 'https://explorer.sui.io',
-    devnet: 'https://explorer.sui.io',
-    mainnet: 'https://explorer.sui.io',
+    testnet: 'https://suiexplorer.com',
+    devnet: 'https://suiexplorer.com',
+    mainnet: 'https://suiexplorer.com',
   },
 } as const;
 
 /**
  * Walrus Storage Explorers
+ * Note: Walrus uses "testnet" in their URLs, not "devnet"
  */
 export const WALRUS_EXPLORERS = {
   // Aggregator endpoint (for downloading blobs)
+  // Format: https://aggregator.walrus-testnet.walrus.space/v1/{blob_id}
   aggregator: {
-    testnet: 'https://aggregator-devnet.walrus.space/v1',
-    devnet: 'https://aggregator-devnet.walrus.space/v1',
+    testnet: 'https://aggregator.walrus-testnet.walrus.space/v1',
+    devnet: 'https://aggregator.walrus-testnet.walrus.space/v1', // Same as testnet
     mainnet: 'https://aggregator.walrus.space/v1', // Will be available on mainnet
   },
   // Walrus Sites (for viewing blobs as websites)
+  // Format: https://{blob_id}.walrus.site
   sites: {
-    testnet: 'https://walrus.site',
-    devnet: 'https://walrus.site',
-    mainnet: 'https://walrus.site',
+    testnet: 'walrus.site',
+    devnet: 'walrus.site',
+    mainnet: 'walrus.site',
   },
 } as const;
 
@@ -62,10 +69,16 @@ export function getSuiTxUrl(
   const baseUrl = SUI_EXPLORERS[explorer][network];
   
   if (explorer === 'official') {
-    // Official explorer uses different format
-    return `${baseUrl}/txblock/${txHash}?network=${network}`;
+    // Official explorer uses search page format
+    return `${baseUrl}/?network=${network}`;
   }
   
+  if (explorer === 'suivision') {
+    // SuiVision uses 'txblock' instead of 'tx'
+    return `${baseUrl}/txblock/${txHash}`;
+  }
+  
+  // SuiScan and default
   return `${baseUrl}/tx/${txHash}`;
 }
 
