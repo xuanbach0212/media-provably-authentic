@@ -71,21 +71,9 @@ export class SuiService {
     reportCID: string,
     enclaveSignature: string
   ): Promise<BlockchainAttestation> {
-    // MOCK MODE: Return mock attestation if no keys configured
+    // Require real keys and contract
     if (!this.keypair || !this.packageId) {
-      console.warn(`[Sui] ⚠️  MOCK MODE: Returning mock attestation for job ${jobId}`);
-      const mockTxHash = `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`;
-      const mockAttestationId = `0x${Math.random().toString(16).substring(2, 34).padEnd(32, '0')}`;
-      return {
-        attestationId: mockAttestationId,
-        txHash: mockTxHash,
-        transactionHash: mockTxHash,
-        blockNumber: Math.floor(Math.random() * 1000000) + 500000,
-        timestamp: new Date().toISOString(),
-        reportCID: reportCID,
-        mediaHash: mediaHash,
-        enclaveId: this.enclaveId || "mock_enclave_1",
-      };
+      throw new Error(`[Sui] ❌ Missing configuration! keypair: ${!!this.keypair}, packageId: ${!!this.packageId}`);
     }
 
     console.log(`[Sui] Submitting attestation for job ${jobId}...`);
@@ -138,21 +126,10 @@ export class SuiService {
       };
     } catch (error: any) {
       console.error(`[Sui] ❌ Failed to submit attestation:`, error.message);
+      console.error(`[Sui] Error details:`, error);
       
-      // Fallback to mock on error
-      console.warn(`[Sui] ⚠️  Falling back to MOCK MODE`);
-      const mockTxHash = `0x${Math.random().toString(16).substring(2, 66).padEnd(64, '0')}`;
-      const mockAttestationId = `0x${Math.random().toString(16).substring(2, 34).padEnd(32, '0')}`;
-      return {
-        attestationId: mockAttestationId,
-        txHash: mockTxHash,
-        transactionHash: mockTxHash,
-        blockNumber: Math.floor(Math.random() * 1000000) + 500000,
-        timestamp: new Date().toISOString(),
-        reportCID: reportCID,
-        mediaHash: mediaHash,
-        enclaveId: this.enclaveId || "mock_enclave_1",
-      };
+      // No mock fallback - throw the error
+      throw new Error(`Failed to submit Sui attestation: ${error.message}`);
     }
   }
 
