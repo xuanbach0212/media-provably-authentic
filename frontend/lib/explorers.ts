@@ -40,6 +40,13 @@ export const SUI_EXPLORERS = {
  * Source: https://docs.wal.app/usage/web-api.html
  */
 export const WALRUS_EXPLORERS = {
+  // Walruscan Explorer (for viewing blobs, events, account activity)
+  // Format: https://walruscan.com/testnet/account/{address}/blobs
+  walruscan: {
+    testnet: 'https://walruscan.com/testnet',
+    devnet: 'https://walruscan.com/devnet',
+    mainnet: 'https://walruscan.com/mainnet',
+  },
   // Aggregator endpoints (for downloading blobs)
   // Multiple options available, using most reliable ones
   aggregator: {
@@ -188,6 +195,32 @@ export function getWalrusSiteUrl(
 ): string {
   // Walrus Sites format: https://{blob_id}.walrus.site
   return `https://${blobId}.${WALRUS_EXPLORERS.sites[network]}`;
+}
+
+/**
+ * Get Walruscan blob explorer URL
+ * @param blobId - Blob ID/CID
+ * @param network - Network (testnet, devnet, mainnet)
+ */
+export function getWalruscanBlobUrl(
+  blobId: string,
+  network: Network = 'testnet'
+): string {
+  const baseUrl = WALRUS_EXPLORERS.walruscan[network];
+  return `${baseUrl}/blob/${blobId}`;
+}
+
+/**
+ * Get Walruscan account blobs URL
+ * @param address - Wallet address
+ * @param network - Network (testnet, devnet, mainnet)
+ */
+export function getWalruscanAccountUrl(
+  address: string,
+  network: Network = 'testnet'
+): string {
+  const baseUrl = WALRUS_EXPLORERS.walruscan[network];
+  return `${baseUrl}/account/${address}/blobs`;
 }
 
 /**

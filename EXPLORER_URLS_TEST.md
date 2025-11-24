@@ -57,7 +57,32 @@ https://explorer.sui.io/txblock/ABC123DEF456...?network=testnet
 
 ## 💾 Walrus Testnet
 
-### 1. Aggregator (For Downloading Blobs)
+### 1. Walruscan Explorer (For Viewing Blobs & Account Activity)
+
+**NEW DISCOVERY**: Walruscan is the official Walrus blockchain explorer!
+
+**Base URL**: https://walruscan.com/testnet  
+**Blob Format**: `https://walruscan.com/testnet/blob/{blob_id}`  
+**Account Blobs**: `https://walruscan.com/testnet/account/{address}/blobs`  
+**Account Events**: `https://walruscan.com/testnet/account/{address}/events`  
+
+**Example**:
+```
+https://walruscan.com/testnet/account/0x1ad96c825a247e49ec038de3f265a05373300cfaa2c0b7025f798105b7391857/blobs
+https://walruscan.com/testnet/account/0x1ad96c825a247e49ec038de3f265a05373300cfaa2c0b7025f798105b7391857/events
+```
+
+**What it does**: 
+- View all blobs stored by an account
+- View blob details and metadata
+- View storage events
+- Track Walrus activity
+
+**Status**: ✅ Official Walrus explorer
+
+---
+
+### 2. Aggregator (For Downloading Blobs)
 
 **Primary (Recommended)**:
 - **Base URL**: https://wal-aggregator-testnet.staketab.org/v1
@@ -83,7 +108,7 @@ https://wal-aggregator-testnet.staketab.org/v1/KeXgbvpHtg-RyN4c3v8_s_Kjf4kJlErVe
 
 ---
 
-### 2. Walrus Sites (For Viewing as Website)
+### 3. Walrus Sites (For Viewing as Website)
 **Format**: `https://{blob_id}.walrus.site`  
 
 **Example**:
@@ -93,6 +118,23 @@ https://ABC123DEF456.walrus.site
 
 **What it does**: Renders the blob as a website (if it's HTML/CSS/JS)  
 **Status**: ✅ For Walrus Sites only
+
+---
+
+## 🔗 Quick Reference
+
+### Sui Testnet Account:
+```
+Portfolio:  https://suiscan.xyz/testnet/account/{address}/portfolio
+Activity:   https://suiscan.xyz/testnet/account/{address}/activity
+TX Blocks:  https://suiscan.xyz/testnet/account/{address}/tx-blocks
+```
+
+### Walrus Testnet Account:
+```
+Blobs:      https://walruscan.com/testnet/account/{address}/blobs
+Events:     https://walruscan.com/testnet/account/{address}/events
+```
 
 ---
 
@@ -148,10 +190,13 @@ https://ABC123DEF456.walrus.site
 ## 🎯 Current Implementation
 
 Our app uses:
-- **Sui**: SuiScan (primary) - `https://suiscan.xyz/testnet/tx/{digest}`
-- **Walrus**: Aggregator - `https://aggregator.walrus-testnet.walrus.space/v1/{blob_id}`
+- **Sui Transactions**: SuiScan - `https://suiscan.xyz/testnet/tx/{digest}`
+- **Sui Accounts**: SuiScan - `https://suiscan.xyz/testnet/account/{address}/portfolio`
+- **Walrus Blobs (Download)**: StakeTab Aggregator - `https://wal-aggregator-testnet.staketab.org/v1/{blob_id}`
+- **Walrus Blobs (View)**: Walruscan - `https://walruscan.com/testnet/blob/{blob_id}`
+- **Walrus Accounts**: Walruscan - `https://walruscan.com/testnet/account/{address}/blobs`
 
-Both are configurable in `frontend/lib/explorers.ts` and can be easily switched to alternatives.
+All are configurable in `frontend/lib/explorers.ts` and can be easily switched to alternatives.
 
 ---
 
