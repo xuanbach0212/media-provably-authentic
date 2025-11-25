@@ -39,8 +39,13 @@ export class NautilusService {
     this.enclaveId = ENCLAVE_ID;
     this.mrenclave = NAUTILUS_MRENCLAVE;
 
-    if (!this.apiUrl || !NAUTILUS_ENABLED) {
-      throw new Error("[Nautilus] Nautilus enclave URL not configured or disabled!");
+    if (!NAUTILUS_ENABLED) {
+      console.warn("[Nautilus] ⚠️  Nautilus is disabled. Set NAUTILUS_ENABLED=true to enable.");
+      return;
+    }
+
+    if (!this.apiUrl) {
+      throw new Error("[Nautilus] Nautilus enclave URL not configured!");
     }
 
     console.log(`[Nautilus] ✅ Connected to Nitro Enclave: ${this.apiUrl}`);
@@ -125,6 +130,14 @@ export class NautilusService {
     pcrs?: Record<string, string>;
   }> {
     const dataHash = this.computeHash(reportData);
+
+    // If Nautilus is disabled, return mock attestation
+    if (!NAUTILUS_ENABLED) {
+      console.warn('[Nautilus] ⚠️  Using mock attestation (Nautilus disabled)');
+      return {
+        signature: `mock_signature_${dataHash.substring(0, 16)}`,
+      };
+    }
 
     try {
       console.log(`[Nautilus] Requesting enclave to sign report...`);

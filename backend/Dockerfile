@@ -14,7 +14,11 @@ WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm install
 
-COPY backend .
+# Copy backend source (exclude dist and node_modules)
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
+
+# Build TypeScript
 RUN npm run build
 
 EXPOSE 3001
