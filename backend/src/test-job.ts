@@ -56,6 +56,13 @@ async function testJobProcessing() {
       mediaHash: "test_hash_" + Math.random().toString(36).substring(7),
       mediaCID: "test_cid_" + Math.random().toString(36).substring(7),
       pHash: "test_phash",
+      metadata: {
+        filename: "test_image.jpg",
+        size: 1024,
+        mimeType: "image/jpeg",
+        sha256: "test_sha256_" + Math.random().toString(36).substring(7),
+        uploadedAt: new Date().toISOString(),
+      },
       encryptionMeta: {
         policyId: "test_policy",
         keyId: "test_key",

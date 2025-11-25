@@ -141,8 +141,7 @@ export class AggregatorService {
       jobId,
       mediaHash,
       reportCID,
-      enclaveSignature,
-      enclaveId
+      enclaveSignature
     );
     console.log(
       `[Aggregator] ✓ Attestation submitted to Sui: ${blockchainAttestation.txHash}`

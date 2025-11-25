@@ -178,11 +178,8 @@ export class NautilusService {
     } catch (error: any) {
       console.error('[Nautilus] Enclave signing failed:', error.message);
       
-      // Fallback to mock for development
-      console.warn('[Nautilus] ⚠️  Falling back to mock attestation');
-      return {
-        signature: this.mockGenerateAttestation(dataHash),
-      };
+      // No fallback - throw the error
+      throw error;
     }
   }
 
@@ -207,9 +204,6 @@ export class NautilusService {
           mrenclave: this.mrenclave,
         },
         {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-          },
           timeout: 10000,
         }
       );

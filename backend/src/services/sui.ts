@@ -124,7 +124,6 @@ export class SuiService {
         blockNumber: 0,
         timestamp: new Date().toISOString(),
         reportCID: reportCID,
-        mediaHash: mediaHash,
         enclaveId: enclaveId || "unknown",
       };
     } catch (error: any) {
