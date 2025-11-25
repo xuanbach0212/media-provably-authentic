@@ -49,7 +49,7 @@ export class WalrusService {
           },
         },
         storageNodeClientOptions: {
-          timeout: 60_000, // 60 seconds timeout for storage node requests
+          timeout: 180_000, // 180 seconds timeout (3 minutes for Raspberry Pi)
           onError: (error) => {
             console.warn("[Walrus] Storage node error:", error.message);
           },
@@ -154,29 +154,51 @@ export class WalrusService {
   async retrieveBlob(blobId: string): Promise<Buffer> {
     console.log(`[Walrus] Retrieving blob: ${blobId.substring(0, 20)}...`);
 
-    try {
-      const data = await this.client.walrus.readBlob({ blobId });
+    const maxRetries = 3;
+    let lastError: any;
 
-      console.log(`[Walrus] ✓ Retrieved ${data.length} bytes`);
-      return Buffer.from(data);
-    } catch (error: any) {
-      console.error(`[Walrus] SDK retrieve error: ${error.message}`);
-
-      // Check if it's a retryable error
-      if (error.name === "RetryableWalrusClientError") {
-        console.log("[Walrus] Resetting client and retrying...");
-        this.client.walrus.reset();
-
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
         const data = await this.client.walrus.readBlob({ blobId });
-        console.log(`[Walrus] ✓ Retrieved after retry`);
-        return Buffer.from(data);
-      }
 
-      // No fallback - must use real Walrus testnet
-      throw new Error(
-        `Failed to retrieve blob from Walrus testnet: ${error.message}`
-      );
+        console.log(`[Walrus] ✓ Retrieved ${data.length} bytes`);
+        return Buffer.from(data);
+      } catch (error: any) {
+        lastError = error;
+        console.error(
+          `[Walrus] SDK retrieve error (attempt ${attempt}/${maxRetries}): ${error.message}`
+        );
+
+        // Check if it's a retryable error
+        if (
+          error.name === "RetryableWalrusClientError" &&
+          attempt < maxRetries
+        ) {
+          console.log("[Walrus] Resetting client and retrying...");
+          this.client.walrus.reset();
+
+          // Exponential backoff: 2s, 4s, 8s
+          const backoffMs = Math.pow(2, attempt) * 1000;
+          console.log(`[Walrus] Waiting ${backoffMs}ms before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+          continue;
+        }
+
+        // If not retryable or last attempt, throw
+        if (attempt === maxRetries) {
+          throw new Error(
+            `Failed to retrieve blob from Walrus testnet after ${maxRetries} attempts: ${lastError.message}`
+          );
+        }
+      }
     }
+
+    // Should never reach here
+    throw new Error(
+      `Failed to retrieve blob from Walrus testnet: ${
+        lastError?.message || "Unknown error"
+      }`
+    );
   }
 
   /**
