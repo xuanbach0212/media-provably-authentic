@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  # Redis for Bull queue
+  redis:
+    image: redis:7-alpine
+    container_name: media-auth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # AI Detection Service
+  ai-detection:
+    build:
+      context: .
+      dockerfile: services/ai-detection/Dockerfile
+    container_name: media-auth-ai-detection
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: unless-stopped
+    volumes:
+      - ./services/ai-detection:/app
+      - ai-models:/root/.cache/huggingface
+
+  # Reverse Search Service
+  reverse-search:
+    build:
+      context: .
+      dockerfile: services/reverse-search/Dockerfile
+    container_name: media-auth-reverse-search
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - SERPAPI_KEY=${SERPAPI_KEY}
+    restart: unless-stopped
+    volumes:
+      - ./services/reverse-search:/app
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: media-auth-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AI_DETECTION_URL=http://ai-detection:8000
+      - REVERSE_SEARCH_URL=http://reverse-search:8002
+      - NAUTILUS_URL=${NAUTILUS_URL}
+      - NAUTILUS_MRENCLAVE=${NAUTILUS_MRENCLAVE}
+      - SUI_NETWORK=${SUI_NETWORK}
+      - SUI_PRIVATE_KEY=${SUI_PRIVATE_KEY}
+      - SUI_PACKAGE_ID=${SUI_PACKAGE_ID}
+      - SEAL_POLICY_PACKAGE=${SEAL_POLICY_PACKAGE}
+      - WALRUS_PUBLISHER_URL=${WALRUS_PUBLISHER_URL}
+      - WALRUS_AGGREGATOR_URL=${WALRUS_AGGREGATOR_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    depends_on:
+      - redis
+      - ai-detection
+      - reverse-search
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - backend-uploads:/app/backend/uploads
+
+volumes:
+  redis-data:
+  ai-models:
+  backend-uploads:
+
+networks:
+  default:
+    name: media-auth-network
