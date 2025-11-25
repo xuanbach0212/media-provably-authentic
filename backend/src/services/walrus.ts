@@ -1,14 +1,14 @@
 /**
  * Walrus Storage Service (Official SDK)
  * Uses @mysten/walrus SDK for testnet integration
- * 
+ *
  * Walrus provides decentralized blob storage on Sui
  * Docs: https://sdk.mystenlabs.com/walrus
  */
 
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { walrus } from "@mysten/walrus";
 
 const WALRUS_EPOCHS = 5; // Store for 5 epochs (~10 days on testnet)
@@ -26,22 +26,32 @@ export class WalrusService {
 
   constructor() {
     // Read env vars in constructor (after dotenv.config())
-    const SUI_NETWORK = (process.env.SUI_NETWORK as "testnet" | "devnet" | "mainnet") || "testnet";
+    const SUI_NETWORK =
+      (process.env.SUI_NETWORK as "testnet" | "devnet" | "mainnet") ||
+      "testnet";
     const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY || "";
     // Initialize Sui client with network property (required by Walrus SDK)
-    const suiClient = new SuiClient({ 
+    const suiClient = new SuiClient({
       url: getFullnodeUrl(SUI_NETWORK),
       // @ts-ignore - Walrus SDK requires network property
       network: SUI_NETWORK,
     });
 
     // Extend with Walrus SDK
+    // Note: Walrus SDK v0.8.4 uses default aggregator for testnet
+    // https://aggregator.walrus-testnet.walrus.space
     this.client = suiClient.$extend(
       walrus({
         uploadRelay: {
           host: "https://upload-relay.testnet.walrus.space",
           sendTip: {
             max: 10_000, // Max 10,000 MIST tip per upload (~0.00001 SUI)
+          },
+        },
+        storageNodeClientOptions: {
+          timeout: 60_000, // 60 seconds timeout for storage node requests
+          onError: (error) => {
+            console.warn("[Walrus] Storage node error:", error.message);
           },
         },
       })
@@ -61,7 +71,9 @@ export class WalrusService {
             Buffer.from(SUI_PRIVATE_KEY, "hex")
           );
         }
-        console.log(`[Walrus] SDK initialized with upload relay (${SUI_NETWORK})`);
+        console.log(
+          `[Walrus] SDK initialized with upload relay (${SUI_NETWORK})`
+        );
       } catch (error: any) {
         console.error("[Walrus] Failed to load keypair:", error.message);
         this.keypair = null;
@@ -80,7 +92,9 @@ export class WalrusService {
     metadata?: Record<string, any>
   ): Promise<WalrusBlob> {
     if (!this.keypair) {
-      throw new Error("Walrus requires keypair to store blobs. Set SUI_PRIVATE_KEY in .env");
+      throw new Error(
+        "Walrus requires keypair to store blobs. Set SUI_PRIVATE_KEY in .env"
+      );
     }
 
     console.log(`[Walrus] Storing ${data.length} bytes via SDK...`);
@@ -103,12 +117,12 @@ export class WalrusService {
       };
     } catch (error: any) {
       console.error("[Walrus] SDK store error:", error.message);
-      
+
       // Check if it's a retryable error
       if (error.name === "RetryableWalrusClientError") {
         console.log("[Walrus] Resetting client and retrying...");
         this.client.walrus.reset();
-        
+
         // Retry once
         const result = await this.client.walrus.writeBlob({
           blob: new Uint8Array(data),
@@ -126,7 +140,9 @@ export class WalrusService {
       }
 
       // No fallback - must use real Walrus testnet
-      throw new Error(`Failed to store blob on Walrus testnet: ${error.message}`);
+      throw new Error(
+        `Failed to store blob on Walrus testnet: ${error.message}`
+      );
     }
   }
 
@@ -140,7 +156,7 @@ export class WalrusService {
 
     try {
       const data = await this.client.walrus.readBlob({ blobId });
-      
+
       console.log(`[Walrus] ✓ Retrieved ${data.length} bytes`);
       return Buffer.from(data);
     } catch (error: any) {
@@ -150,14 +166,16 @@ export class WalrusService {
       if (error.name === "RetryableWalrusClientError") {
         console.log("[Walrus] Resetting client and retrying...");
         this.client.walrus.reset();
-        
+
         const data = await this.client.walrus.readBlob({ blobId });
         console.log(`[Walrus] ✓ Retrieved after retry`);
         return Buffer.from(data);
       }
 
       // No fallback - must use real Walrus testnet
-      throw new Error(`Failed to retrieve blob from Walrus testnet: ${error.message}`);
+      throw new Error(
+        `Failed to retrieve blob from Walrus testnet: ${error.message}`
+      );
     }
   }
 

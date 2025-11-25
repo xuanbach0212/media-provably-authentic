@@ -134,7 +134,7 @@ export class OrchestrationService {
           media: mediaBuffer.toString("base64"),
         },
         {
-          timeout: 30000, // 30 seconds timeout
+          timeout: 120000, // 120 seconds timeout (models need time to load)
         }
       );
 
@@ -187,7 +187,7 @@ export class OrchestrationService {
           filename: metadata.filename,
         },
         {
-          timeout: 30000, // 30 seconds timeout
+          timeout: 120000, // 120 seconds timeout (Google search can be slow)
         }
       );
 
