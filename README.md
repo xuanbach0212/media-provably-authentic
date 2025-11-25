@@ -524,13 +524,11 @@ npm start
 
 ## 📚 Documentation
 
-- **[FINAL_SYSTEM_AUDIT.md](FINAL_SYSTEM_AUDIT.md)** - Complete system audit and status
-- **[FLOW_AUDIT_REPORT.md](FLOW_AUDIT_REPORT.md)** - Flow analysis and fixes
 - **[NAUTILUS_INTEGRATION_COMPLETE.md](NAUTILUS_INTEGRATION_COMPLETE.md)** - TEE integration guide
-- **[DATA_STRUCTURE_MAP.md](DATA_STRUCTURE_MAP.md)** - Data flow mapping
-- **[ANALYSIS_GUIDE.md](ANALYSIS_GUIDE.md)** - Metrics interpretation
 - **[docs/PROOF_OF_AUTHENTICITY_PIPELINE_SEQUENCE.md](docs/PROOF_OF_AUTHENTICITY_PIPELINE_SEQUENCE.md)** - Sequence diagram
 - **[infra/ARCHITECTURE.md](infra/ARCHITECTURE.md)** - Architecture details
+- **[backend/README.md](backend/README.md)** - Backend API documentation
+- **[frontend/README.md](frontend/README.md)** - Frontend documentation
 
 ---
 
