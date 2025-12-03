@@ -142,12 +142,16 @@ async def detect(image: UploadFile = File(...)):
             pil_image.thumbnail(config.MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
         
         logger.info(f"Processing image: {pil_image.size}, mode: {pil_image.mode}")
+        logger.info(f"[DEBUG] About to call detector.detect()...")
+        logger.info(f"[DEBUG] Image bytes size: {len(image_bytes)} bytes")
         
         # Get models
         detector = get_models()
         
         # Run detection (pass image_bytes for EXIF analysis)
         result = detector.detect(pil_image, image_bytes)
+        logger.info(f"[DEBUG] detect() returned successfully")
+        logger.info(f"[DEBUG] Result keys: {list(result.keys())}")
         
         logger.info(f"Detection complete: ensemble score={result.get('ensembleScore', 0):.3f}, models={result.get('modelScores', {}).get('ensemble_model_count', 0)}")
         
@@ -196,12 +200,16 @@ async def detect_base64(request: DetectionRequest):
             image.thumbnail(config.MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
         
         logger.info(f"Processing image: {image.size}, mode: {image.mode}")
+        logger.info(f"[DEBUG] About to call detector.detect()...")
+        logger.info(f"[DEBUG] Image bytes size: {len(image_bytes)} bytes")
         
         # Get models
         detector = get_models()
         
         # Run detection (pass image_bytes for EXIF analysis)
         result = detector.detect(image, image_bytes)
+        logger.info(f"[DEBUG] detect() returned successfully")
+        logger.info(f"[DEBUG] Result keys: {list(result.keys())}")
         
         logger.info(f"Detection complete: ensemble score={result.get('ensembleScore', 0):.3f}, models={result.get('modelScores', {}).get('ensemble_model_count', 0)}")
         

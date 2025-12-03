@@ -99,40 +99,54 @@ class AIDetectionModels:
             dict with verdict, confidence, model_scores, and forensic_analysis
         """
         self.load_models()
+        logger.info("[DEBUG] ===== STARTING DETECTION =====")
+        logger.info(f"[DEBUG] Image size: {image.size}, mode: {image.mode}")
+        logger.info(f"[DEBUG] Models loaded: {len(self.loaded_models)}")
+        logger.info(f"[DEBUG] Forensics enabled: {config.ENABLE_FORENSICS}")
 
         # ============================================================
         # PHASE 1: IMAGE QUALITY ASSESSMENT AND ENHANCEMENT
         # ============================================================
+        logger.info("[DEBUG] ===== PHASE 1 START =====")
         logger.info("Phase 1: Quality assessment and enhancement...")
         enhanced_image, quality_report = self.quality_assessor.assess_and_enhance(image)
         logger.info(
             f"Quality: {quality_report['overall_quality']:.2f}, "
             f"Enhancement: {quality_report.get('enhancement_applied', 'none')}"
         )
+        logger.info("[DEBUG] ===== PHASE 1 COMPLETE =====")
 
         # ============================================================
         # PHASE 2: FORENSIC ANALYSIS (on original image)
         # ============================================================
         forensics = {}
         if config.ENABLE_FORENSICS:
+            logger.info("[DEBUG] ===== PHASE 2 START =====")
             logger.info("Phase 2: Forensic analysis...")
+            logger.info(f"[DEBUG] Calling forensic_analyzer.analyze()...")
             forensics = self.forensic_analyzer.analyze(image, image_bytes)
             logger.info(
                 f"Manipulation likelihood: {forensics.get('manipulation_likelihood', 0):.3f}"
             )
+            logger.info("[DEBUG] ===== PHASE 2 COMPLETE =====")
+        else:
+            logger.info("[DEBUG] ===== PHASE 2 SKIPPED (FORENSICS DISABLED) =====")
 
         # ============================================================
         # PHASE 3: FREQUENCY DOMAIN ANALYSIS (on enhanced image)
         # ============================================================
+        logger.info("[DEBUG] ===== PHASE 3 START =====")
         logger.info("Phase 3: Frequency domain analysis...")
         frequency_analysis = self.frequency_analyzer.analyze(enhanced_image)
         logger.info(
             f"Frequency AI score: {frequency_analysis.get('frequency_ai_score', 0):.3f}"
         )
+        logger.info("[DEBUG] ===== PHASE 3 COMPLETE =====")
 
         # ============================================================
         # PHASE 4: MODEL-BASED DETECTION (on enhanced image)
         # ============================================================
+        logger.info("[DEBUG] ===== PHASE 4 START =====")
         logger.info("Phase 4: Running detection models...")
         model_scores = {}
         all_predictions = []
@@ -140,6 +154,7 @@ class AIDetectionModels:
         # Run all loaded models on enhanced image
         for model_key, model_info in self.loaded_models.items():
             try:
+                logger.info(f"[DEBUG] Running model: {model_key}")
                 logger.info(f"Running {model_key} model: {model_info['name']}")
                 predictions = self._run_model(enhanced_image, model_info)
 
@@ -166,9 +181,12 @@ class AIDetectionModels:
             except Exception as e:
                 logger.error(f"Error running {model_key}: {e}")
 
+        logger.info(f"[DEBUG] ===== PHASE 4 COMPLETE (ran {len(all_predictions)} models) =====")
+
         # ============================================================
         # PHASE 5: SMART ENSEMBLE COMBINATION
         # ============================================================
+        logger.info("[DEBUG] ===== PHASE 5 START =====")
         logger.info("Phase 5: Smart ensemble combination...")
 
         # Use smart ensemble instead of simple weighted average
@@ -181,6 +199,8 @@ class AIDetectionModels:
         verdict = ensemble_result["verdict"]
         confidence = ensemble_result["confidence"]
         scores = ensemble_result["scores"]
+        logger.info(f"[DEBUG] Ensemble verdict: {verdict}, confidence: {confidence:.3f}")
+        logger.info("[DEBUG] ===== PHASE 5 COMPLETE =====")
 
         # ============================================================
         # PHASE 6: INCORPORATE FREQUENCY ANALYSIS
@@ -238,6 +258,8 @@ class AIDetectionModels:
         frequency_clean = self._convert_numpy_types(frequency_analysis)
         quality_clean = self._convert_numpy_types(quality_report)
 
+        logger.info("[DEBUG] ===== DETECTION COMPLETE - RETURNING RESULT =====")
+        
         # Return RAW METRICS ONLY - no verdict or confidence
         return {
             "modelScores": model_scores_clean,
