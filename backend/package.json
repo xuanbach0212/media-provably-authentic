@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --clear src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test-walrus": "ts-node src/scripts/test-walrus.ts"
   },
   "dependencies": {
     "@media-auth/shared": "file:../shared",

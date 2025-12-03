@@ -17,7 +17,7 @@ import { EnclaveAttestation } from "@media-auth/shared";
 // Nautilus Configuration
 const NAUTILUS_ENCLAVE_URL = process.env.NAUTILUS_ENCLAVE_URL || "";
 const NAUTILUS_ENABLED = process.env.NAUTILUS_ENABLED === "true";
-const ENCLAVE_ID = process.env.ENCLAVE_ID || "mock_enclave_1";
+const ENCLAVE_ID = process.env.ENCLAVE_ID || "nautilus_nitro_enclave";
 const NAUTILUS_MRENCLAVE = process.env.NAUTILUS_MRENCLAVE || "";
 
 interface NautilusAttestation {
@@ -156,7 +156,7 @@ export class NautilusService {
           headers: {
             'Content-Type': 'application/json',
           },
-          timeout: 30000,
+          timeout: 120000, // 120 seconds for Nautilus TEE
         }
       );
 

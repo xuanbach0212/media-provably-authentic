@@ -525,10 +525,63 @@ npm start
 ## 📚 Documentation
 
 - **[NAUTILUS_INTEGRATION_COMPLETE.md](NAUTILUS_INTEGRATION_COMPLETE.md)** - TEE integration guide
+- **[WALRUS_TROUBLESHOOTING.md](WALRUS_TROUBLESHOOTING.md)** - Walrus storage troubleshooting
 - **[docs/PROOF_OF_AUTHENTICITY_PIPELINE_SEQUENCE.md](docs/PROOF_OF_AUTHENTICITY_PIPELINE_SEQUENCE.md)** - Sequence diagram
 - **[infra/ARCHITECTURE.md](infra/ARCHITECTURE.md)** - Architecture details
 - **[backend/README.md](backend/README.md)** - Backend API documentation
 - **[frontend/README.md](frontend/README.md)** - Frontend documentation
+
+## 🗄️ Storage Configuration
+
+This project supports multiple storage backends with automatic fallback:
+
+### Storage Providers
+
+1. **Walrus (Decentralized)**
+   - Decentralized blob storage on Sui blockchain
+   - Recommended for production with proper network setup
+   - May have connectivity issues in Docker environments
+
+2. **LocalFile (Fallback)**
+   - Local filesystem storage
+   - Reliable fallback when Walrus is unavailable
+   - Recommended for Docker deployments and development
+
+### Configuration
+
+Set storage provider in `backend/.env`:
+
+```env
+# Use Walrus (requires SUI_PRIVATE_KEY)
+STORAGE_PROVIDER=walrus
+WALRUS_FALLBACK_ENABLED=true
+
+# OR use local storage (recommended for Docker)
+STORAGE_PROVIDER=local
+```
+
+### When to Use Each Provider
+
+**Use Walrus:**
+- Local development (not Docker)
+- Production with proper network configuration
+- When decentralization is required
+
+**Use LocalFile:**
+- Docker deployments (Mac, Raspberry Pi)
+- Demo/hackathon environments
+- When reliability is more important than decentralization
+
+### Troubleshooting Storage Issues
+
+If you encounter "fetch failed" errors with Walrus:
+
+1. Check the [Walrus Troubleshooting Guide](WALRUS_TROUBLESHOOTING.md)
+2. Run diagnostic script: `npm run test-walrus`
+3. Switch to local storage: `STORAGE_PROVIDER=local`
+4. Enable fallback: `WALRUS_FALLBACK_ENABLED=true`
+
+The system will automatically fall back to local storage if Walrus is unavailable.
 
 ---
 

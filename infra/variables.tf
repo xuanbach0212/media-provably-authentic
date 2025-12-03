@@ -38,7 +38,7 @@ variable "spot_max_price" {
 variable "allocate_elastic_ip" {
   description = "Allocate Elastic IP for stable endpoint"
   type        = bool
-  default     = false # Save $3.60/month by using dynamic IP
+  default     = true # Enable for stable endpoint (cost: $3.60/month)
 }
 
 variable "enclave_memory_mb" {

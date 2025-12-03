@@ -17,6 +17,7 @@ export interface ProgressUpdate {
     modelName?: string;
     uploadProgress?: number;
   };
+  warning?: string; // Optional warning message for user
 }
 
 export interface ErrorUpdate {

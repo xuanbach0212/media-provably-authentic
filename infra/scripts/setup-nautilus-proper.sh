@@ -128,20 +128,149 @@ echo "🔨 Building Nautilus enclave..."
 echo "⚠️  Enclave build requires AWS credentials"
 echo "    Run manually: cd /opt/nautilus && make ENCLAVE_APP=media_auth"
 
-# Create systemd service for enclave
-echo "🔧 Creating systemd service..."
+# Download and setup auto-start scripts from GitHub
+echo "🔧 Setting up auto-start systemd service..."
+cd /opt/nautilus
+
+# Create start script
+cat > /opt/nautilus/start-enclave.sh <<'STARTSCRIPT'
+#!/bin/bash
+# Auto-start script for Nautilus Enclave
+set -e
+
+ENCLAVE_CID=16
+EIF_PATH="/opt/nautilus/out/nitro.eif"
+LOG_FILE="/var/log/nautilus-enclave.log"
+
+echo "$(date): Starting Nautilus enclave..." | tee -a "$LOG_FILE"
+
+# Terminate any existing enclaves
+nitro-cli terminate-enclave --all 2>&1 | tee -a "$LOG_FILE" || true
+pkill -f "python3.*3000" || true
+sleep 5
+
+# Start enclave
+echo "$(date): Launching enclave..." | tee -a "$LOG_FILE"
+nitro-cli run-enclave \
+  --eif-path "$EIF_PATH" \
+  --memory ${enclave_memory_mb} \
+  --cpu-count ${enclave_cpu_count} \
+  --enclave-cid "$ENCLAVE_CID" \
+  --debug-mode 2>&1 | tee -a "$LOG_FILE"
+
+echo "$(date): Waiting for enclave to boot (15s)..." | tee -a "$LOG_FILE"
+sleep 15
+
+# Send secrets via vsock
+echo "$(date): Sending secrets to enclave..." | tee -a "$LOG_FILE"
+python3 <<'PYSECRETS' 2>&1 | tee -a "$LOG_FILE"
+import socket
+import json
+AF_VSOCK = 40
+try:
+    sock = socket.socket(AF_VSOCK, socket.SOCK_STREAM)
+    sock.connect((16, 7777))
+    sock.send(json.dumps({}).encode())
+    sock.close()
+    print("✅ Secrets sent successfully")
+except Exception as e:
+    print(f"❌ Failed to send secrets: {e}")
+    exit(1)
+PYSECRETS
+
+sleep 3
+
+# Start TCP-to-VSOCK proxy in background
+echo "$(date): Starting TCP-to-VSOCK proxy on port 3000..." | tee -a "$LOG_FILE"
+nohup python3 <<'PYPROXY' >> "$LOG_FILE" 2>&1 &
+import socket
+import threading
+import sys
+
+AF_VSOCK = 40
+ENCLAVE_CID = 16
+ENCLAVE_PORT = 3000
+TCP_PORT = 3000
+
+def proxy_connection(client_sock):
+    try:
+        vsock = socket.socket(AF_VSOCK, socket.SOCK_STREAM)
+        vsock.connect((ENCLAVE_CID, ENCLAVE_PORT))
+
+        def forward(src, dst, name):
+            try:
+                while True:
+                    data = src.recv(4096)
+                    if not data:
+                        break
+                    dst.sendall(data)
+            except:
+                pass
+            finally:
+                try:
+                    src.close()
+                    dst.close()
+                except:
+                    pass
+
+        t1 = threading.Thread(target=forward, args=(client_sock, vsock, "c->e"))
+        t2 = threading.Thread(target=forward, args=(vsock, client_sock, "e->c"))
+        t1.daemon = True
+        t2.daemon = True
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+    except Exception as e:
+        try:
+            client_sock.close()
+        except:
+            pass
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind(('0.0.0.0', TCP_PORT))
+server.listen(10)
+print(f"✅ Proxy listening on 0.0.0.0:{TCP_PORT}")
+sys.stdout.flush()
+
+while True:
+    try:
+        client, addr = server.accept()
+        t = threading.Thread(target=proxy_connection, args=(client,))
+        t.daemon = True
+        t.start()
+    except Exception as e:
+        pass
+PYPROXY
+
+sleep 2
+curl -s --connect-timeout 3 http://localhost:3000/ | grep -q "Pong" && \
+  echo "$(date): ✅ Enclave is responding!" | tee -a "$LOG_FILE" || \
+  echo "$(date): ⚠️ Enclave not responding yet" | tee -a "$LOG_FILE"
+
+echo "$(date): Enclave startup complete" | tee -a "$LOG_FILE"
+STARTSCRIPT
+
+sudo chmod +x /opt/nautilus/start-enclave.sh
+
+# Create systemd service
 cat > /tmp/nautilus-enclave.service <<'EOF'
 [Unit]
-Description=Nautilus Nitro Enclave
-After=docker.service nitro-enclaves-allocator.service
+Description=Nautilus Nitro Enclave Service
+After=network.target nitro-enclaves-allocator.service
+Requires=nitro-enclaves-allocator.service
 
 [Service]
-Type=simple
+Type=forking
 User=root
 WorkingDirectory=/opt/nautilus
-ExecStart=/usr/bin/nitro-cli run-enclave --eif-path /opt/nautilus/enclave.eif --memory 6144 --cpu-count 2 --enclave-cid 16
-Restart=always
+ExecStart=/opt/nautilus/start-enclave.sh
+ExecStop=/usr/bin/nitro-cli terminate-enclave --all
+Restart=on-failure
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

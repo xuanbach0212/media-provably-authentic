@@ -27,15 +27,20 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const userId = req.body.userId || "anonymous";
-    const signature = req.body.signature || "mock_signature";
-
-    console.log(
-      `[Upload] Received file: ${req.file.originalname}, size: ${req.file.size}`
-    );
+    const signature = req.body.signature;
+    if (!signature) {
+      console.warn("[Upload] ⚠️  No signature provided by user");
+    }
 
     // Generate jobId FIRST so we can emit socket updates
     const jobId = generateJobId();
-    console.log(`[Upload] Created job ${jobId}`);
+    
+    console.log(`[Upload] ═══════════════════════════════════════`);
+    console.log(`[Upload] Job ID: ${jobId}`);
+    console.log(`[Upload] User: ${userId}`);
+    console.log(`[Upload] File: ${req.file.originalname}`);
+    console.log(`[Upload] Size: ${(req.file.size / 1024).toFixed(2)} KB`);
+    console.log(`[Upload] ═══════════════════════════════════════`);
 
     // Stage 1: Initializing (0-10%)
     SocketManager.emitProgress(jobId, {
@@ -49,6 +54,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // 1. Compute hashes
     const sha256 = computeSHA256(req.file.buffer);
     const pHash = computePerceptualHash(req.file.buffer);
+    
+    // Debug delay for visibility
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log(`[Upload] ✓ SHA-256: ${sha256.substring(0, 32)}...`);
+    console.log(`[Upload] ✓ pHash: ${pHash}`);
 
     SocketManager.emitProgress(jobId, {
       stage: 1,
@@ -58,8 +68,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // 2. Create encryption policy (allow our mock enclave)
-    const policyId = await encryption.createPolicy(["mock_enclave_1", "*"]);
+    // 2. Create encryption policy (use real enclave ID)
+    const ENCLAVE_ID = process.env.ENCLAVE_ID || "nautilus_nitro_enclave";
+    const policyId = await encryption.createPolicy([ENCLAVE_ID, "*"]);
+    
+    // Debug delay for visibility
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log(`[Upload] ✓ Policy created for enclave: ${ENCLAVE_ID}`);
+    console.log(`[Upload] ✓ Policy ID: ${policyId}`);
 
     // Stage 2: Encrypting & Storing (10-20%)
     SocketManager.emitProgress(jobId, {
@@ -73,22 +89,53 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     // 3. Encrypt the media
     const { encrypted, metadata: encryptionMeta } =
       await encryption.encryptData(req.file.buffer, policyId);
+    
+    // Debug delay for visibility
+    await new Promise(resolve => setTimeout(resolve, 800));
+    console.log(`[Upload] ✓ Media encrypted`);
+    console.log(`[Upload]   Original size: ${req.file.size} bytes`);
+    console.log(`[Upload]   Encrypted size: ${encrypted.length} bytes`);
+    console.log(`[Upload]   Algorithm: ${encryptionMeta.algorithm}`);
+
+    // Get current storage provider
+    const storageProvider = storage.getCurrentProvider();
+    const isUsingFallback = storageProvider === "LocalFile";
 
     SocketManager.emitProgress(jobId, {
       stage: 2,
       stageName: "Encrypting & Storing",
-      substep: "Storing encrypted media on Walrus...",
+      substep: isUsingFallback 
+        ? "Storing encrypted media locally..." 
+        : "Storing encrypted media on Walrus...",
       progress: 16,
       timestamp: new Date().toISOString(),
     });
 
-    // 4. Store encrypted media in Walrus
+    // 4. Store encrypted media
     const mediaCID = await storage.storeBlob(encrypted, {
       filename: req.file.originalname,
       mimeType: req.file.mimetype,
       sha256,
       pHash,
     });
+    
+    // Debug delay for visibility
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log(`[Upload] ✓ Media stored`);
+    console.log(`[Upload]   Provider: ${storageProvider}`);
+    console.log(`[Upload]   CID: ${mediaCID}`);
+
+    // Notify if using fallback storage
+    if (isUsingFallback) {
+      SocketManager.emitProgress(jobId, {
+        stage: 2,
+        stageName: "Encrypting & Storing",
+        substep: "Using local storage (Walrus unavailable)",
+        progress: 18,
+        timestamp: new Date().toISOString(),
+        warning: "Blobs stored locally, not on decentralized network",
+      });
+    }
 
     SocketManager.emitProgress(jobId, {
       stage: 2,
@@ -133,6 +180,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       mediaCID,
       status: "PENDING",
       mediaHash: sha256,
+      storageProvider: storage.getCurrentProvider(),
       progress: {
         stage: 2,
         stageName: "Encrypting & Storing",

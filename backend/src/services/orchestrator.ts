@@ -15,7 +15,7 @@ const AI_DETECTION_URL =
   process.env.AI_DETECTION_URL || "http://localhost:8000";
 const REVERSE_SEARCH_URL =
   process.env.REVERSE_SEARCH_URL || "http://localhost:8002";
-const ENCLAVE_ID = process.env.ENCLAVE_ID || "mock_enclave_1";
+const ENCLAVE_ID = process.env.ENCLAVE_ID || "nautilus_nitro_enclave";
 
 export class OrchestrationService {
   private storage: StorageService;

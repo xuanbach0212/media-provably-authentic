@@ -110,9 +110,18 @@ resource "aws_security_group" "nitro_enclave" {
     cidr_blocks = var.allowed_ssh_cidr
   }
 
-  # Enclave API access
+  # Nautilus Enclave API (port 3000)
   ingress {
-    description = "Enclave API"
+    description = "Nautilus Enclave API"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_api_cidr
+  }
+
+  # Legacy API port (if needed)
+  ingress {
+    description = "Legacy Enclave API"
     from_port   = 5000
     to_port     = 5000
     protocol    = "tcp"

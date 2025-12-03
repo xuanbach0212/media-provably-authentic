@@ -2,6 +2,12 @@
 # Build context should be project root (.)
 FROM node:20-alpine
 
+# Disable IPv6 to force IPv4 for all connections
+RUN echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf || true
+
+# Add network diagnostic tools
+RUN apk add --no-cache curl bind-tools
+
 WORKDIR /app
 
 # Copy shared package first

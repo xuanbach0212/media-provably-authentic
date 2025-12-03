@@ -201,6 +201,7 @@ export interface ProgressUpdate {
   progress: number; // 0-100
   timestamp: string;
   metadata?: any;
+  warning?: string; // Optional warning message for user
 }
 
 export interface ErrorUpdate {
