@@ -64,7 +64,7 @@ ENSEMBLE_MIN_CONSENSUS = 0.5  # Minimum cross-model agreement
 ENSEMBLE_OUTLIER_THRESHOLD = 0.3  # Deviation threshold for outliers
 
 # Performance settings
-MODEL_WARM_UP = os.getenv("MODEL_WARM_UP", "false").lower() == "true"
+MODEL_WARM_UP = os.getenv("MODEL_WARM_UP", "false").lower() == "true"  # Disabled warm-up to avoid container restart
 USE_HALF_PRECISION = False  # Set to True for faster inference on GPU
 
 # Logging
