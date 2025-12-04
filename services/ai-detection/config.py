@@ -3,7 +3,7 @@ import os
 import torch
 
 # Model configuration - TOP PERFORMERS from Hugging Face research (2024)
-# REDUCED to 3 models for Docker memory constraints
+# OPTIMIZED for Docker: Only 2 best models
 MODELS = {
     # "dafilab": "Dafilab/ai-image-detector",  # EfficientNet-B4, 98.59% accuracy 🏆 (gated repo)
     "smogy": "Smogy/SMOGY-Ai-images-detector",  # Fine-tuned SDXL, 98.18% accuracy 🥇
@@ -11,7 +11,7 @@ MODELS = {
     # "sdxl": "Organika/sdxl-detector",  # SDXL specific (redundant with smogy)
     # "deepfake": "dima806/deepfake_vs_real_image_detection",  # Deepfake detection
     # "mmdbes": "mmdbes/Fake-image-detection",  # ResNet50, CIFAKE trained, 93.34%
-    "clip": "openai/clip-vit-base-patch32",  # CLIP baseline (always available)
+    # "clip": "openai/clip-vit-base-patch32",  # CLIP baseline - too heavy for Docker
 }
 
 # Detection strategy
