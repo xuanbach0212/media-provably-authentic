@@ -21,7 +21,6 @@ services:
     restart: unless-stopped
     environment:
       - MODEL_WARM_UP=false
-      - ENABLE_FORENSICS=false
     volumes:
       # For development with hot reload, uncomment:
       # - ./services/ai-detection:/app
@@ -30,9 +29,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: 12G
         reservations:
-          memory: 4G
+          memory: 6G
 
   # Reverse Search Service
   reverse-search:
