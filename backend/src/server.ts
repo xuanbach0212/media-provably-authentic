@@ -105,10 +105,11 @@ app.use(
 );
 
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`🚀 Backend API + WebSocket running on port ${PORT}`);
   console.log(`   - HTTP REST API: http://localhost:${PORT}`);
   console.log(`   - WebSocket: ws://localhost:${PORT}`);
+  console.log(`   - Socket.IO: http://localhost:${PORT}/socket.io/`);
   console.log(`   - Upload: POST /api/upload`);
   console.log(`   - Job Status: GET /api/job/:jobId`);
   console.log(`   - Verify: POST /api/verify`);
