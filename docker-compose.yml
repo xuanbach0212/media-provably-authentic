@@ -29,9 +29,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 12G
+          memory: 10G
         reservations:
-          memory: 6G
+          memory: 5G
 
   # Reverse Search Service
   reverse-search:
